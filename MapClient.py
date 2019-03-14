@@ -1,3 +1,4 @@
+from afrl.cmasi.SessionStatus import SessionStatus, SimulationStatusType
 from amase.TCPClient import AmaseTCPClient
 from amase.TCPClient import IDataReceived
 from afrl.cmasi.searchai.HazardZoneEstimateReport import HazardZoneEstimateReport
@@ -19,6 +20,12 @@ from xml.dom import minidom
 from visdom import Visdom
 import argparse
 import numpy as np
+
+CONTOUR = "contour"
+
+VIZ_SCATTER = "viz_scatter"
+
+HEATMAP = "heatmap"
 
 
 class PrintLMCPObject(IDataReceived):
@@ -45,11 +52,11 @@ class SampleHazardDetector(IDataReceived):
         self.__client = tcpClient
         self.__uavsLoiter = {}
         self.__estimatedHazardZone = Polygon()
-        self.scenario = minidom.parse('/home/edoardo/Development/amase-firehack/example scenarios/Challenge_0_Scenario_UK.xml')
-        simulationViewNode = self.scenario.getElementsByTagName('SimulationView')
-        self.latitude = float(simulationViewNode[0].attributes['Latitude'].value)
-        self.longitude = float(simulationViewNode[0].attributes['Longitude'].value)
-        self.long_extent = float(simulationViewNode[0].attributes['LongExtent'].value)
+        self.scenario = minidom.parse('/home/edoardo/Development/amase-firehack/example scenarios/HazardZoneDetectionScenario.xml')
+        simulation_view_node = self.scenario.getElementsByTagName('SimulationView')
+        self.latitude = float(simulation_view_node[0].attributes['Latitude'].value)
+        self.longitude = float(simulation_view_node[0].attributes['Longitude'].value)
+        self.long_extent = float(simulation_view_node[0].attributes['LongExtent'].value)
         # self.centre_lat = self.latitude / 2
         # self.centre_long = self.longitude / 2
         self.max_lat = self.latitude + self.long_extent
@@ -59,16 +66,24 @@ class SampleHazardDetector(IDataReceived):
         self.coordinates = []
         self.heatmap = np.zeros((100, 100))
         # self.contour = self.viz.contour(X=self.heatmap, opts=dict(title='Contour plot'))
-        self.viz_heatmap = self.viz.heatmap(X=self.heatmap, opts=dict(title='Heatmap plot'))
+        self.viz_heatmap = self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
         # self.viz_scatter = self.viz.scatter(X=np.array([]), Y=np.array([]))
 
-    def scale(self, X, x_min, x_max):
-        nom = (X - X.min(axis=0)) * (x_max - x_min)
-        denom = X.max(axis=0) - X.min(axis=0)
-        denom[denom == 0] = 1
-        return x_min + nom / denom
-
     def dataReceived(self, lmcpObject):
+        # try:
+        #     if hasattr(lmcpObject, 'Time'):
+        #         self.current_time = int(getattr(lmcpObject, 'Time'))
+        # except Exception as ex:
+        #     print(ex)
+        if isinstance(lmcpObject, SessionStatus):
+            session_status: SessionStatus = lmcpObject
+            self.current_time = session_status.get_ScenarioTime()
+            state: SimulationStatusType.SimulationStatusType = session_status.get_State()
+            if state is SimulationStatusType.SimulationStatusType.Reset or state is SimulationStatusType.SimulationStatusType.Stopped:
+                self.viz.close(win=HEATMAP)
+                self.viz.close(win=VIZ_SCATTER)
+                self.heatmap = np.zeros((100, 100))
+            self.current_time = session_status.StartTime
         if isinstance(lmcpObject, HazardZoneDetection):
             hazardDetected = lmcpObject
             # Get location where zone first detected
@@ -77,15 +92,18 @@ class SampleHazardDetector(IDataReceived):
             long = int((detectedLocation.get_Longitude() - self.min_long) / (self.max_long - self.min_long) * 100)
 
             try:
-                # self.heatmap = np.zeros((100, 100))
-                # for pair in np_coordinates:
-                #     self.heatmap[pair[0]][pair[1]] = 1.0
                 self.heatmap[lat][long] = 1.0
             except Exception as ex:
                 print(ex)
             # self.viz.contour(X=self.heatmap, win=self.contour, opts=dict(title='Contour plot'))
-            self.viz.heatmap(X=self.heatmap, win=self.viz_heatmap, opts=dict(title='Heatmap plot'))
-            self.viz.scatter(X=np.array([[detectedLocation.get_Longitude(), detectedLocation.get_Latitude()]]), Y=np.array([1]), win="viz_scatter", update='append')
+            self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
+            self.viz.contour(X=self.heatmap, win=CONTOUR, opts=dict(title='Contour plot'))
+            self.viz.scatter(X=np.array([[detectedLocation.get_Longitude(), detectedLocation.get_Latitude()]]), Y=np.array([1]), win=VIZ_SCATTER, update='append')
+
+    # def updateMap(self):
+    #     for i in range(len(self.heatmap)):
+    #         for j in range(len(self.heatmap[i])):
+    #
 
     def sendLoiterCommand(self, vehicleId, location):
         # Setting up the mission to send to the UAV

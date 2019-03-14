@@ -15,19 +15,19 @@ from lmcp import LMCPObject
 
 ## This file was auto-created by LmcpGen. Modifications will be overwritten.
 
-from afrl.cmasi import Location3D
+from afrl.cmasi import AbstractZone
 
 
-class RecoveryPoint(Location3D.Location3D):
+class RecoveryPoint(AbstractZone.AbstractZone):
 
     def __init__(self):
-        Location3D.Location3D.__init__(self)
+        AbstractZone.AbstractZone.__init__(self)
         self.LMCP_TYPE = 4
         self.SERIES_NAME = "SEARCHAI"
         self.FULL_LMCP_TYPE_NAME = "afrl.cmasi.searchai.RecoveryPoint"
         #Series Name turned into a long for quick comparisons.
         self.SERIES_NAME_ID = 6000273900112986441
-        self.SERIES_VERSION = 4
+        self.SERIES_VERSION = 5
 
         #Define message fields
         self.LocationName = ""   #string
@@ -39,7 +39,7 @@ class RecoveryPoint(Location3D.Location3D):
         members.
         """
         buffer = bytearray()
-        buffer.extend(Location3D.Location3D.pack(self))
+        buffer.extend(AbstractZone.AbstractZone.pack(self))
         buffer.extend(struct.pack(">H", len(self.LocationName) ))
         if len(self.LocationName) > 0:
             if (sys.version_info > (3, 0)):
@@ -53,7 +53,7 @@ class RecoveryPoint(Location3D.Location3D):
         """
         Unpacks data from a bytearray and sets class members
         """
-        _pos = Location3D.Location3D.unpack(self, buffer, _pos)
+        _pos = AbstractZone.AbstractZone.unpack(self, buffer, _pos)
         _strlen = struct.unpack_from(">H", buffer, _pos )[0]
         _pos += 2
         if _strlen > 0:
@@ -65,7 +65,7 @@ class RecoveryPoint(Location3D.Location3D):
 
 
     def unpackFromXMLNode(self, el, seriesFactory):
-        Location3D.Location3D.unpackFromXMLNode(self, el, seriesFactory)
+        AbstractZone.AbstractZone.unpackFromXMLNode(self, el, seriesFactory)
         for e in el.childNodes:
             if e.nodeType == xml.dom.Node.ELEMENT_NODE:
                 if e.localName == "LocationName" and len(e.childNodes) > 0 :
@@ -74,7 +74,7 @@ class RecoveryPoint(Location3D.Location3D):
         return
 
     def unpackFromDict(self, d, seriesFactory):
-        Location3D.Location3D.unpackFromDict(self, d, seriesFactory)
+        AbstractZone.AbstractZone.unpackFromDict(self, d, seriesFactory)
         for key in d:
             if key == "LocationName":
                 self.LocationName = d[key]
@@ -93,7 +93,7 @@ class RecoveryPoint(Location3D.Location3D):
         """
         Returns a string representation of all variables
         """
-        buf = Location3D.Location3D.toString(self)
+        buf = AbstractZone.AbstractZone.toString(self)
         buf += "From RecoveryPoint:\n"
         buf +=    "LocationName = " + str( self.LocationName ) + "\n" 
 
@@ -113,7 +113,7 @@ class RecoveryPoint(Location3D.Location3D):
         return d
 
     def toDictMembers(self, d):
-        Location3D.Location3D.toDictMembers(self, d)
+        AbstractZone.AbstractZone.toDictMembers(self, d)
         d['LocationName'] = self.LocationName
 
         return
@@ -132,14 +132,14 @@ class RecoveryPoint(Location3D.Location3D):
 
     def toXMLStr(self, ws):
         str = ws + '<RecoveryPoint Series="SEARCHAI" >\n';
-        #str +=Location3D.Location3D.toXMLMembersStr(self, ws + "  ")
+        #str +=AbstractZone.AbstractZone.toXMLMembersStr(self, ws + "  ")
         str += self.toXMLMembersStr(ws + "  ")
         str += ws + "</RecoveryPoint>\n";
         return str
 
     def toXMLMembersStr(self, ws):
         buf = ""
-        buf += Location3D.Location3D.toXMLMembersStr(self, ws)
+        buf += AbstractZone.AbstractZone.toXMLMembersStr(self, ws)
         buf += ws + "<LocationName>" + str(self.LocationName) + "</LocationName>\n"
 
         return buf

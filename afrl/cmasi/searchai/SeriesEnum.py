@@ -23,7 +23,7 @@ from afrl.cmasi.searchai import HazardSensorState
 SERIES_NAME = "SEARCHAI"
 #Series Name turned into a long for quick comparisons.
 SERIES_NAME_ID = 6000273900112986441
-SERIES_VERSION = 4
+SERIES_VERSION = 5
 
 
 class SeriesEnum:

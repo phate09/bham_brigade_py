@@ -28,7 +28,7 @@ class HazardZone(AbstractZone.AbstractZone):
         self.FULL_LMCP_TYPE_NAME = "afrl.cmasi.searchai.HazardZone"
         #Series Name turned into a long for quick comparisons.
         self.SERIES_NAME_ID = 6000273900112986441
-        self.SERIES_VERSION = 4
+        self.SERIES_VERSION = 5
 
         #Define message fields
         self.ZoneType = HazardType.HazardType.Undefined   #HazardType

@@ -27,7 +27,7 @@ class HazardSensorState(CameraState.CameraState):
         self.FULL_LMCP_TYPE_NAME = "afrl.cmasi.searchai.HazardSensorState"
         #Series Name turned into a long for quick comparisons.
         self.SERIES_NAME_ID = 6000273900112986441
-        self.SERIES_VERSION = 4
+        self.SERIES_VERSION = 5
 
         #Define message fields
 
