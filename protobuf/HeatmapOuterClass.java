@@ -17,17 +17,9 @@ public final class HeatmapOuterClass {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>.google.protobuf.Timestamp last_updated = 1;</code>
+     * <code>uint32 time = 1;</code>
      */
-    boolean hasLastUpdated();
-    /**
-     * <code>.google.protobuf.Timestamp last_updated = 1;</code>
-     */
-    com.google.protobuf.Timestamp getLastUpdated();
-    /**
-     * <code>.google.protobuf.Timestamp last_updated = 1;</code>
-     */
-    com.google.protobuf.TimestampOrBuilder getLastUpdatedOrBuilder();
+    int getTime();
 
     /**
      * <code>repeated uint32 size = 2;</code>
@@ -68,6 +60,10 @@ public final class HeatmapOuterClass {
     double getMap(int index);
   }
   /**
+   * <pre>
+   *import "google/protobuf/timestamp.proto";
+   * </pre>
+   *
    * Protobuf type {@code Heatmap}
    */
   public  static final class Heatmap extends
@@ -80,6 +76,7 @@ public final class HeatmapOuterClass {
       super(builder);
     }
     private Heatmap() {
+      time_ = 0;
       size_ = java.util.Collections.emptyList();
       map_ = java.util.Collections.emptyList();
     }
@@ -108,17 +105,9 @@ public final class HeatmapOuterClass {
             case 0:
               done = true;
               break;
-            case 10: {
-              com.google.protobuf.Timestamp.Builder subBuilder = null;
-              if (lastUpdated_ != null) {
-                subBuilder = lastUpdated_.toBuilder();
-              }
-              lastUpdated_ = input.readMessage(com.google.protobuf.Timestamp.parser(), extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(lastUpdated_);
-                lastUpdated_ = subBuilder.buildPartial();
-              }
+            case 8: {
 
+              time_ = input.readUInt32();
               break;
             }
             case 16: {
@@ -202,25 +191,13 @@ public final class HeatmapOuterClass {
     }
 
     private int bitField0_;
-    public static final int LAST_UPDATED_FIELD_NUMBER = 1;
-    private com.google.protobuf.Timestamp lastUpdated_;
+    public static final int TIME_FIELD_NUMBER = 1;
+    private int time_;
     /**
-     * <code>.google.protobuf.Timestamp last_updated = 1;</code>
+     * <code>uint32 time = 1;</code>
      */
-    public boolean hasLastUpdated() {
-      return lastUpdated_ != null;
-    }
-    /**
-     * <code>.google.protobuf.Timestamp last_updated = 1;</code>
-     */
-    public com.google.protobuf.Timestamp getLastUpdated() {
-      return lastUpdated_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : lastUpdated_;
-    }
-    /**
-     * <code>.google.protobuf.Timestamp last_updated = 1;</code>
-     */
-    public com.google.protobuf.TimestampOrBuilder getLastUpdatedOrBuilder() {
-      return getLastUpdated();
+    public int getTime() {
+      return time_;
     }
 
     public static final int SIZE_FIELD_NUMBER = 2;
@@ -296,8 +273,8 @@ public final class HeatmapOuterClass {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      if (lastUpdated_ != null) {
-        output.writeMessage(1, getLastUpdated());
+      if (time_ != 0) {
+        output.writeUInt32(1, time_);
       }
       if (getSizeList().size() > 0) {
         output.writeUInt32NoTag(18);
@@ -322,9 +299,9 @@ public final class HeatmapOuterClass {
       if (size != -1) return size;
 
       size = 0;
-      if (lastUpdated_ != null) {
+      if (time_ != 0) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, getLastUpdated());
+          .computeUInt32Size(1, time_);
       }
       {
         int dataSize = 0;
@@ -367,11 +344,8 @@ public final class HeatmapOuterClass {
       HeatmapOuterClass.Heatmap other = (HeatmapOuterClass.Heatmap) obj;
 
       boolean result = true;
-      result = result && (hasLastUpdated() == other.hasLastUpdated());
-      if (hasLastUpdated()) {
-        result = result && getLastUpdated()
-            .equals(other.getLastUpdated());
-      }
+      result = result && (getTime()
+          == other.getTime());
       result = result && getSizeList()
           .equals(other.getSizeList());
       result = result && getMapList()
@@ -387,10 +361,8 @@ public final class HeatmapOuterClass {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
-      if (hasLastUpdated()) {
-        hash = (37 * hash) + LAST_UPDATED_FIELD_NUMBER;
-        hash = (53 * hash) + getLastUpdated().hashCode();
-      }
+      hash = (37 * hash) + TIME_FIELD_NUMBER;
+      hash = (53 * hash) + getTime();
       if (getSizeCount() > 0) {
         hash = (37 * hash) + SIZE_FIELD_NUMBER;
         hash = (53 * hash) + getSizeList().hashCode();
@@ -495,6 +467,10 @@ public final class HeatmapOuterClass {
       return builder;
     }
     /**
+     * <pre>
+     *import "google/protobuf/timestamp.proto";
+     * </pre>
+     *
      * Protobuf type {@code Heatmap}
      */
     public static final class Builder extends
@@ -532,12 +508,8 @@ public final class HeatmapOuterClass {
       @java.lang.Override
       public Builder clear() {
         super.clear();
-        if (lastUpdatedBuilder_ == null) {
-          lastUpdated_ = null;
-        } else {
-          lastUpdated_ = null;
-          lastUpdatedBuilder_ = null;
-        }
+        time_ = 0;
+
         size_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000002);
         map_ = java.util.Collections.emptyList();
@@ -570,11 +542,7 @@ public final class HeatmapOuterClass {
         HeatmapOuterClass.Heatmap result = new HeatmapOuterClass.Heatmap(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (lastUpdatedBuilder_ == null) {
-          result.lastUpdated_ = lastUpdated_;
-        } else {
-          result.lastUpdated_ = lastUpdatedBuilder_.build();
-        }
+        result.time_ = time_;
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
           size_ = java.util.Collections.unmodifiableList(size_);
           bitField0_ = (bitField0_ & ~0x00000002);
@@ -634,8 +602,8 @@ public final class HeatmapOuterClass {
 
       public Builder mergeFrom(HeatmapOuterClass.Heatmap other) {
         if (other == HeatmapOuterClass.Heatmap.getDefaultInstance()) return this;
-        if (other.hasLastUpdated()) {
-          mergeLastUpdated(other.getLastUpdated());
+        if (other.getTime() != 0) {
+          setTime(other.getTime());
         }
         if (!other.size_.isEmpty()) {
           if (size_.isEmpty()) {
@@ -687,121 +655,30 @@ public final class HeatmapOuterClass {
       }
       private int bitField0_;
 
-      private com.google.protobuf.Timestamp lastUpdated_ = null;
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> lastUpdatedBuilder_;
+      private int time_ ;
       /**
-       * <code>.google.protobuf.Timestamp last_updated = 1;</code>
+       * <code>uint32 time = 1;</code>
        */
-      public boolean hasLastUpdated() {
-        return lastUpdatedBuilder_ != null || lastUpdated_ != null;
+      public int getTime() {
+        return time_;
       }
       /**
-       * <code>.google.protobuf.Timestamp last_updated = 1;</code>
+       * <code>uint32 time = 1;</code>
        */
-      public com.google.protobuf.Timestamp getLastUpdated() {
-        if (lastUpdatedBuilder_ == null) {
-          return lastUpdated_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : lastUpdated_;
-        } else {
-          return lastUpdatedBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>.google.protobuf.Timestamp last_updated = 1;</code>
-       */
-      public Builder setLastUpdated(com.google.protobuf.Timestamp value) {
-        if (lastUpdatedBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          lastUpdated_ = value;
-          onChanged();
-        } else {
-          lastUpdatedBuilder_.setMessage(value);
-        }
-
-        return this;
-      }
-      /**
-       * <code>.google.protobuf.Timestamp last_updated = 1;</code>
-       */
-      public Builder setLastUpdated(
-          com.google.protobuf.Timestamp.Builder builderForValue) {
-        if (lastUpdatedBuilder_ == null) {
-          lastUpdated_ = builderForValue.build();
-          onChanged();
-        } else {
-          lastUpdatedBuilder_.setMessage(builderForValue.build());
-        }
-
-        return this;
-      }
-      /**
-       * <code>.google.protobuf.Timestamp last_updated = 1;</code>
-       */
-      public Builder mergeLastUpdated(com.google.protobuf.Timestamp value) {
-        if (lastUpdatedBuilder_ == null) {
-          if (lastUpdated_ != null) {
-            lastUpdated_ =
-              com.google.protobuf.Timestamp.newBuilder(lastUpdated_).mergeFrom(value).buildPartial();
-          } else {
-            lastUpdated_ = value;
-          }
-          onChanged();
-        } else {
-          lastUpdatedBuilder_.mergeFrom(value);
-        }
-
-        return this;
-      }
-      /**
-       * <code>.google.protobuf.Timestamp last_updated = 1;</code>
-       */
-      public Builder clearLastUpdated() {
-        if (lastUpdatedBuilder_ == null) {
-          lastUpdated_ = null;
-          onChanged();
-        } else {
-          lastUpdated_ = null;
-          lastUpdatedBuilder_ = null;
-        }
-
-        return this;
-      }
-      /**
-       * <code>.google.protobuf.Timestamp last_updated = 1;</code>
-       */
-      public com.google.protobuf.Timestamp.Builder getLastUpdatedBuilder() {
+      public Builder setTime(int value) {
         
+        time_ = value;
         onChanged();
-        return getLastUpdatedFieldBuilder().getBuilder();
+        return this;
       }
       /**
-       * <code>.google.protobuf.Timestamp last_updated = 1;</code>
+       * <code>uint32 time = 1;</code>
        */
-      public com.google.protobuf.TimestampOrBuilder getLastUpdatedOrBuilder() {
-        if (lastUpdatedBuilder_ != null) {
-          return lastUpdatedBuilder_.getMessageOrBuilder();
-        } else {
-          return lastUpdated_ == null ?
-              com.google.protobuf.Timestamp.getDefaultInstance() : lastUpdated_;
-        }
-      }
-      /**
-       * <code>.google.protobuf.Timestamp last_updated = 1;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
-          getLastUpdatedFieldBuilder() {
-        if (lastUpdatedBuilder_ == null) {
-          lastUpdatedBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
-                  getLastUpdated(),
-                  getParentForChildren(),
-                  isClean());
-          lastUpdated_ = null;
-        }
-        return lastUpdatedBuilder_;
+      public Builder clearTime() {
+        
+        time_ = 0;
+        onChanged();
+        return this;
       }
 
       private java.util.List<java.lang.Integer> size_ = java.util.Collections.emptyList();
@@ -1030,10 +907,9 @@ public final class HeatmapOuterClass {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\026protobuf/heatmap.proto\032\037google/protobu" +
-      "f/timestamp.proto\"Z\n\007Heatmap\0220\n\014last_upd" +
-      "ated\030\001 \001(\0132\032.google.protobuf.Timestamp\022\014" +
-      "\n\004size\030\002 \003(\r\022\017\n\003map\030\003 \003(\001B\002\020\001b\006proto3"
+      "\n\026protobuf/heatmap.proto\"6\n\007Heatmap\022\014\n\004t" +
+      "ime\030\001 \001(\r\022\014\n\004size\030\002 \003(\r\022\017\n\003map\030\003 \003(\001B\002\020\001" +
+      "b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -1046,15 +922,13 @@ public final class HeatmapOuterClass {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
-          com.google.protobuf.TimestampProto.getDescriptor(),
         }, assigner);
     internal_static_Heatmap_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_Heatmap_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Heatmap_descriptor,
-        new java.lang.String[] { "LastUpdated", "Size", "Map", });
-    com.google.protobuf.TimestampProto.getDescriptor();
+        new java.lang.String[] { "Time", "Size", "Map", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)
