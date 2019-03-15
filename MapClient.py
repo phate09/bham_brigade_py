@@ -66,7 +66,7 @@ class SampleHazardDetector(IDataReceived):
         self.coordinates = []
         self.heatmap = np.zeros((100, 100))
         # self.contour = self.viz.contour(X=self.heatmap, opts=dict(title='Contour plot'))
-        self.viz_heatmap = self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
+        # self.viz_heatmap = self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
         # self.viz_scatter = self.viz.scatter(X=np.array([]), Y=np.array([]))
 
     def dataReceived(self, lmcpObject):
@@ -82,8 +82,10 @@ class SampleHazardDetector(IDataReceived):
             if state is SimulationStatusType.SimulationStatusType.Reset or state is SimulationStatusType.SimulationStatusType.Stopped:
                 self.viz.close(win=HEATMAP)
                 self.viz.close(win=VIZ_SCATTER)
+                self.viz.close(win=CONTOUR)
                 self.heatmap = np.zeros((100, 100))
             self.current_time = session_status.StartTime
+            self.heatmap = self.update_heatmap()
         if isinstance(lmcpObject, HazardZoneDetection):
             hazardDetected = lmcpObject
             # Get location where zone first detected
@@ -100,10 +102,10 @@ class SampleHazardDetector(IDataReceived):
             self.viz.contour(X=self.heatmap, win=CONTOUR, opts=dict(title='Contour plot'))
             self.viz.scatter(X=np.array([[detectedLocation.get_Longitude(), detectedLocation.get_Latitude()]]), Y=np.array([1]), win=VIZ_SCATTER, update='append')
 
-    # def updateMap(self):
-    #     for i in range(len(self.heatmap)):
-    #         for j in range(len(self.heatmap[i])):
-    #
+    def update_heatmap(self, deltaTime):
+        """
+        Updates the heatmap and returns a new heatmap
+        """
 
     def sendLoiterCommand(self, vehicleId, location):
         # Setting up the mission to send to the UAV
