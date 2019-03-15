@@ -20,6 +20,7 @@ from xml.dom import minidom
 from visdom import Visdom
 import argparse
 import numpy as np
+import protobuf.communication_client
 
 CONTOUR = "contour"
 
@@ -65,6 +66,7 @@ class SampleHazardDetector(IDataReceived):
         self.min_long = self.longitude - self.long_extent
         self.coordinates = []
         self.heatmap = np.zeros((100, 100))
+        self.communication_channel = protobuf.communication_client.CommunicationChannel()
         # self.contour = self.viz.contour(X=self.heatmap, opts=dict(title='Contour plot'))
         # self.viz_heatmap = self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
         # self.viz_scatter = self.viz.scatter(X=np.array([]), Y=np.array([]))
@@ -86,7 +88,8 @@ class SampleHazardDetector(IDataReceived):
                 self.heatmap = np.zeros((100, 100))
             delta_time = session_status.ScenarioTime - self.current_time
             self.current_time = session_status.ScenarioTime
-            self.heatmap = self.update_heatmap(delta_time)
+            # self.heatmap = self.update_heatmap(delta_time)
+            self.communication_channel.send(self.current_time,self.heatmap)
         if isinstance(lmcpObject, HazardZoneDetection):
             hazardDetected = lmcpObject
             # Get location where zone first detected

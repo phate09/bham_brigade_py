@@ -22,15 +22,15 @@ public final class HeatmapOuterClass {
     int getTime();
 
     /**
-     * <code>repeated uint32 size = 2;</code>
+     * <code>repeated int32 size = 2;</code>
      */
     java.util.List<java.lang.Integer> getSizeList();
     /**
-     * <code>repeated uint32 size = 2;</code>
+     * <code>repeated int32 size = 2;</code>
      */
     int getSizeCount();
     /**
-     * <code>repeated uint32 size = 2;</code>
+     * <code>repeated int32 size = 2;</code>
      */
     int getSize(int index);
 
@@ -115,7 +115,7 @@ public final class HeatmapOuterClass {
                 size_ = new java.util.ArrayList<java.lang.Integer>();
                 mutable_bitField0_ |= 0x00000002;
               }
-              size_.add(input.readUInt32());
+              size_.add(input.readInt32());
               break;
             }
             case 18: {
@@ -126,7 +126,7 @@ public final class HeatmapOuterClass {
                 mutable_bitField0_ |= 0x00000002;
               }
               while (input.getBytesUntilLimit() > 0) {
-                size_.add(input.readUInt32());
+                size_.add(input.readInt32());
               }
               input.popLimit(limit);
               break;
@@ -203,20 +203,20 @@ public final class HeatmapOuterClass {
     public static final int SIZE_FIELD_NUMBER = 2;
     private java.util.List<java.lang.Integer> size_;
     /**
-     * <code>repeated uint32 size = 2;</code>
+     * <code>repeated int32 size = 2;</code>
      */
     public java.util.List<java.lang.Integer>
         getSizeList() {
       return size_;
     }
     /**
-     * <code>repeated uint32 size = 2;</code>
+     * <code>repeated int32 size = 2;</code>
      */
     public int getSizeCount() {
       return size_.size();
     }
     /**
-     * <code>repeated uint32 size = 2;</code>
+     * <code>repeated int32 size = 2;</code>
      */
     public int getSize(int index) {
       return size_.get(index);
@@ -281,7 +281,7 @@ public final class HeatmapOuterClass {
         output.writeUInt32NoTag(sizeMemoizedSerializedSize);
       }
       for (int i = 0; i < size_.size(); i++) {
-        output.writeUInt32NoTag(size_.get(i));
+        output.writeInt32NoTag(size_.get(i));
       }
       if (getMapList().size() > 0) {
         output.writeUInt32NoTag(26);
@@ -307,7 +307,7 @@ public final class HeatmapOuterClass {
         int dataSize = 0;
         for (int i = 0; i < size_.size(); i++) {
           dataSize += com.google.protobuf.CodedOutputStream
-            .computeUInt32SizeNoTag(size_.get(i));
+            .computeInt32SizeNoTag(size_.get(i));
         }
         size += dataSize;
         if (!getSizeList().isEmpty()) {
@@ -689,26 +689,26 @@ public final class HeatmapOuterClass {
          }
       }
       /**
-       * <code>repeated uint32 size = 2;</code>
+       * <code>repeated int32 size = 2;</code>
        */
       public java.util.List<java.lang.Integer>
           getSizeList() {
         return java.util.Collections.unmodifiableList(size_);
       }
       /**
-       * <code>repeated uint32 size = 2;</code>
+       * <code>repeated int32 size = 2;</code>
        */
       public int getSizeCount() {
         return size_.size();
       }
       /**
-       * <code>repeated uint32 size = 2;</code>
+       * <code>repeated int32 size = 2;</code>
        */
       public int getSize(int index) {
         return size_.get(index);
       }
       /**
-       * <code>repeated uint32 size = 2;</code>
+       * <code>repeated int32 size = 2;</code>
        */
       public Builder setSize(
           int index, int value) {
@@ -718,7 +718,7 @@ public final class HeatmapOuterClass {
         return this;
       }
       /**
-       * <code>repeated uint32 size = 2;</code>
+       * <code>repeated int32 size = 2;</code>
        */
       public Builder addSize(int value) {
         ensureSizeIsMutable();
@@ -727,7 +727,7 @@ public final class HeatmapOuterClass {
         return this;
       }
       /**
-       * <code>repeated uint32 size = 2;</code>
+       * <code>repeated int32 size = 2;</code>
        */
       public Builder addAllSize(
           java.lang.Iterable<? extends java.lang.Integer> values) {
@@ -738,7 +738,7 @@ public final class HeatmapOuterClass {
         return this;
       }
       /**
-       * <code>repeated uint32 size = 2;</code>
+       * <code>repeated int32 size = 2;</code>
        */
       public Builder clearSize() {
         size_ = java.util.Collections.emptyList();
@@ -908,7 +908,7 @@ public final class HeatmapOuterClass {
   static {
     java.lang.String[] descriptorData = {
       "\n\026protobuf/heatmap.proto\"6\n\007Heatmap\022\014\n\004t" +
-      "ime\030\001 \001(\r\022\014\n\004size\030\002 \003(\r\022\017\n\003map\030\003 \003(\001B\002\020\001" +
+      "ime\030\001 \001(\r\022\014\n\004size\030\002 \003(\005\022\017\n\003map\030\003 \003(\001B\002\020\001" +
       "b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
