@@ -84,8 +84,9 @@ class SampleHazardDetector(IDataReceived):
                 self.viz.close(win=VIZ_SCATTER)
                 self.viz.close(win=CONTOUR)
                 self.heatmap = np.zeros((100, 100))
-            self.current_time = session_status.StartTime
-            self.heatmap = self.update_heatmap()
+            delta_time = session_status.ScenarioTime - self.current_time
+            self.current_time = session_status.ScenarioTime
+            self.heatmap = self.update_heatmap(delta_time)
         if isinstance(lmcpObject, HazardZoneDetection):
             hazardDetected = lmcpObject
             # Get location where zone first detected
