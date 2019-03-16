@@ -13,7 +13,6 @@ class CommunicationChannel:
         self.socket.bind("tcp://*:5556")
 
     def send(self, simulation_time, heatmap: np.ndarray):
-        # while True:
         heatmap_message: protobuf.heatmap_pb2.Heatmap = protobuf.heatmap_pb2.Heatmap()
         heatmap_message.time = simulation_time
         size = heatmap.shape
@@ -21,4 +20,3 @@ class CommunicationChannel:
         heatmap_message.size[:] = size
         heatmap_message.map[:] = list(heatmap.flatten())
         self.socket.send(heatmap_message.SerializeToString())
-        # self.socket.send_string("10001 hello")
