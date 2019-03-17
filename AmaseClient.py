@@ -41,7 +41,7 @@ class SampleHazardDetector(IDataReceived):
                 self.__estimatedHazardZone.get_BoundaryPoints().append(detectedLocation)
 
                 #Send out the estimation report to draw the polygon
-                self.sendEstimateReport();
+                self.sendEstimateReport()
 
                 self.__uavsLoiter[detectingEntity] = True
                 print('UAV' + str(detectingEntity) + ' detected hazard at ' + str(detectedLocation.get_Latitude()) + ',' + str(detectedLocation.get_Longitude()) + '. Sending loiter command.');

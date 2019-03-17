@@ -21,6 +21,7 @@ from visdom import Visdom
 import argparse
 import numpy as np
 import protobuf.communication_client
+from scipy.spatial import ConvexHull
 
 CONTOUR = "contour"
 
@@ -77,6 +78,21 @@ class SampleHazardDetector(IDataReceived):
         #         self.current_time = int(getattr(lmcpObject, 'Time'))
         # except Exception as ex:
         #     print(ex)
+
+        if isinstance(lmcpObject, HazardZoneDetection):
+            hazardDetected = lmcpObject
+            # Get location where zone first detected
+            detectedLocation = hazardDetected.get_DetectedLocation()
+            lat, long = self.normalise_coordinates(detectedLocation)
+
+            try:
+                self.heatmap[lat][long] = 1.0
+            except Exception as ex:
+                print(ex)
+            # self.viz.contour(X=self.heatmap, win=self.contour, opts=dict(title='Contour plot'))
+            self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
+            self.viz.contour(X=self.heatmap, win=CONTOUR, opts=dict(title='Contour plot'))
+            self.viz.scatter(X=np.array([[detectedLocation.get_Longitude(), detectedLocation.get_Latitude()]]), Y=np.array([1]), win=VIZ_SCATTER, update='append')
         if isinstance(lmcpObject, SessionStatus):
             session_status: SessionStatus = lmcpObject
             self.current_time = session_status.get_ScenarioTime()
@@ -89,27 +105,49 @@ class SampleHazardDetector(IDataReceived):
             delta_time = session_status.ScenarioTime - self.current_time
             self.current_time = session_status.ScenarioTime
             # self.heatmap = self.update_heatmap(delta_time)
-            self.communication_channel.send(self.current_time,self.heatmap)
-        if isinstance(lmcpObject, HazardZoneDetection):
-            hazardDetected = lmcpObject
-            # Get location where zone first detected
-            detectedLocation = hazardDetected.get_DetectedLocation()
-            lat = int((detectedLocation.get_Latitude() - self.min_lat) / (self.max_lat - self.min_lat) * 100)
-            long = int((detectedLocation.get_Longitude() - self.min_long) / (self.max_long - self.min_long) * 100)
+            self.communication_channel.send(self.current_time, self.heatmap)
+            self.convex_hull()
 
-            try:
-                self.heatmap[lat][long] = 1.0
-            except Exception as ex:
-                print(ex)
-            # self.viz.contour(X=self.heatmap, win=self.contour, opts=dict(title='Contour plot'))
-            self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
-            self.viz.contour(X=self.heatmap, win=CONTOUR, opts=dict(title='Contour plot'))
-            self.viz.scatter(X=np.array([[detectedLocation.get_Longitude(), detectedLocation.get_Latitude()]]), Y=np.array([1]), win=VIZ_SCATTER, update='append')
+    def normalise_coordinates(self, detectedLocation):
+        lat = int((detectedLocation.get_Latitude() - self.min_lat) / (self.max_lat - self.min_lat) * self.heatmap.shape[0])
+        long = int((detectedLocation.get_Longitude() - self.min_long) / (self.max_long - self.min_long) * self.heatmap.shape[1])
+        return lat, long
+
+    def denormalise_coordinates(self, lat, long):
+        norm_lat = (lat * (self.max_lat - self.min_lat) / self.heatmap.shape[0]) + self.min_lat
+        norm_long = (long * (self.max_long - self.min_long) / self.heatmap.shape[1]) + self.min_long
+        return norm_lat, norm_long
 
     def update_heatmap(self, deltaTime):
         """
         Updates the heatmap and returns a new heatmap
         """
+
+    def convex_hull(self):
+        """
+        Generates the convex hull from the point cloud
+        :return:
+        """
+        coords = []
+        for row in range(self.heatmap.shape[0]):
+            for col in range(self.heatmap.shape[1]):
+                if self.heatmap[row][col] > 0.95:
+                    coords.append((row, col))
+        if len(coords) < 3:
+            return
+        try:
+            poly = ConvexHull(coords)
+            self.__estimatedHazardZone.get_BoundaryPoints().clear()
+            for index in poly.vertices:
+                point = Location3D()
+                lat, long = self.denormalise_coordinates(poly.points[index][0], poly.points[index][1])
+                point.set_Latitude(lat)
+                point.set_Longitude(long)
+                # point.set_Latitude(index.)
+                self.__estimatedHazardZone.get_BoundaryPoints().append(point)
+            self.sendEstimateReport()
+        except Exception as ex:
+            print(ex)
 
     def sendLoiterCommand(self, vehicleId, location):
         # Setting up the mission to send to the UAV
@@ -160,7 +198,9 @@ if __name__ == '__main__':
     myPort = 5555
     amaseClient = AmaseTCPClient(myHost, myPort)
     # amaseClient.addReceiveCallback(PrintLMCPObject())
-    amaseClient.addReceiveCallback(SampleHazardDetector(amaseClient))
+    detector = SampleHazardDetector(amaseClient)
+    # detector.convex_hull()
+    amaseClient.addReceiveCallback(detector)
 
     try:
         # make a threaded client, listen until a keyboard interrupt (ctrl-c)
