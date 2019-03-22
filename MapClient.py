@@ -1,3 +1,5 @@
+from afrl.cmasi.AirVehicleState import AirVehicleState
+from afrl.cmasi.KeyValuePair import KeyValuePair
 from afrl.cmasi.SessionStatus import SessionStatus, SimulationStatusType
 from amase.TCPClient import AmaseTCPClient
 from amase.TCPClient import IDataReceived
@@ -15,13 +17,13 @@ from afrl.cmasi.searchai.HazardZoneDetection import HazardZoneDetection
 from afrl.cmasi.searchai.HazardType import HazardType
 from afrl.cmasi.Location3D import Location3D
 import xml.etree.ElementTree
-import matplotlib.pyplot as plt
 from xml.dom import minidom
 from visdom import Visdom
 import argparse
 import numpy as np
 import protobuf.communication_client
 from scipy.spatial import ConvexHull
+from scipy import ndimage
 
 CONTOUR = "contour"
 
@@ -54,7 +56,20 @@ class SampleHazardDetector(IDataReceived):
         self.__client = tcpClient
         self.__uavsLoiter = {}
         self.__estimatedHazardZone = Polygon()
-        self.scenario = minidom.parse('/home/edoardo/Development/amase-firehack/example scenarios/HazardZoneDetectionScenario.xml')
+        # self.filename = '/home/edoardo/Development/amase-firehack/example scenarios/HazardZoneDetectionScenario.xml'
+        # self.load_scenario(self.filename)
+        self.filename = None
+        self.coordinates = []
+        self.heatmap = np.zeros((100, 100))
+        self.smooth = np.zeros((100, 100))
+        self.drones_status = {}
+        self.communication_channel = protobuf.communication_client.CommunicationChannel()
+        # self.contour = self.viz.contour(X=self.heatmap, opts=dict(title='Contour plot'))
+        # self.viz_heatmap = self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
+        # self.viz_scatter = self.viz.scatter(X=np.array([]), Y=np.array([]))
+
+    def load_scenario(self, filename):
+        self.scenario = minidom.parse(filename)
         simulation_view_node = self.scenario.getElementsByTagName('SimulationView')
         self.latitude = float(simulation_view_node[0].attributes['Latitude'].value)
         self.longitude = float(simulation_view_node[0].attributes['Longitude'].value)
@@ -65,48 +80,95 @@ class SampleHazardDetector(IDataReceived):
         self.min_lat = self.latitude - self.long_extent
         self.max_long = self.longitude + self.long_extent
         self.min_long = self.longitude - self.long_extent
-        self.coordinates = []
-        self.heatmap = np.zeros((100, 100))
-        self.communication_channel = protobuf.communication_client.CommunicationChannel()
-        # self.contour = self.viz.contour(X=self.heatmap, opts=dict(title='Contour plot'))
-        # self.viz_heatmap = self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
-        # self.viz_scatter = self.viz.scatter(X=np.array([]), Y=np.array([]))
 
     def dataReceived(self, lmcpObject):
-        # try:
-        #     if hasattr(lmcpObject, 'Time'):
-        #         self.current_time = int(getattr(lmcpObject, 'Time'))
-        # except Exception as ex:
-        #     print(ex)
+        try:
 
-        if isinstance(lmcpObject, HazardZoneDetection):
-            hazardDetected = lmcpObject
-            # Get location where zone first detected
-            detectedLocation = hazardDetected.get_DetectedLocation()
-            lat, long = self.normalise_coordinates(detectedLocation)
+            if isinstance(lmcpObject, SessionStatus):
+                session_status: SessionStatus = lmcpObject
+                self.current_time = session_status.get_ScenarioTime()
+                state: SimulationStatusType.SimulationStatusType = session_status.get_State()
+                if state is SimulationStatusType.SimulationStatusType.Reset:
+                    self.viz.close(win=HEATMAP)
+                    self.viz.close(win=VIZ_SCATTER)
+                    self.viz.close(win=CONTOUR)
+                    self.viz.close(win="Trajectory")
+                    self.heatmap = np.zeros((100, 100))
+                    self.drones_status = {}
+                    if len(session_status.get_Parameters()) > 0:
+                        param: KeyValuePair
+                        for param in session_status.get_Parameters():
+                            if param.Key == b'source':
+                                self.filename = param.Value.decode("utf-8")
+                    if self.filename is not None:
+                        self.load_scenario(self.filename)
+                delta_time = session_status.ScenarioTime - self.current_time
+                self.current_time = session_status.ScenarioTime
+                # self.heatmap = self.update_heatmap(delta_time)
+                self.communication_channel.send(self.current_time, self.heatmap)
+                self.convex_hull()
+            if isinstance(lmcpObject, AirVehicleState):
+                vehicleState: AirVehicleState = lmcpObject
+                id = vehicleState.ID
+                heading = vehicleState.Heading
+                location: Location3D = vehicleState.get_Location()
+                self.drones_status[id] = (heading, location)
+                # matplotlib demo:
+                try:
+                    # import matplotlib
+                    # matplotlib.use('Agg')
+                    # import matplotlib.pyplot as plt
+                    locations = []
+                    y = []
+                    markers = []
+                    for key in self.drones_status:
+                        location: Location3D
+                        heading: int
+                        heading, location = self.drones_status[key]
+                        locations.append([location.get_Longitude(), location.get_Latitude()])
+                        y.append([1])
+                        heading = (360.0 - heading) % 360.0  # counterclockwise to clockwise
+                        markers.append((3, 0, heading))
+                        # plt.plot(location.get_Longitude(), location.get_Latitude(), marker=(3, 0, heading), markersize=20, linestyle='None')
+                    # plot = plt.plot(locations, y, markers, markersize=20, linestyle='None')
+                    self.viz.scatter(X=np.array(locations), Y=np.array(y), win=VIZ_SCATTER, opts=dict(
+                        xtickmin=self.min_long,
+                        xtickmax=self.max_long,
+                        ytickmin=self.min_lat,
+                        ytickmax=self.max_lat,
+                        marker=markers,
+                        markersize=10,
+                        linestyle='None'
+                    ))
+                    # plt.xlim([self.min_long, self.max_long])
+                    # plt.ylim([self.min_lat, self.max_lat])
+                    # self.viz.matplot(plot=plt, win="Trajectory")#opts=dict(resizable=True)
+                    # plt.close()
+                except BaseException as err:
+                    print('Skipped matplotlib example')
+                    print('Error message: ', err)
 
-            try:
-                self.heatmap[lat][long] = 1.0
-            except Exception as ex:
-                print(ex)
-            # self.viz.contour(X=self.heatmap, win=self.contour, opts=dict(title='Contour plot'))
-            self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
-            self.viz.contour(X=self.heatmap, win=CONTOUR, opts=dict(title='Contour plot'))
-            self.viz.scatter(X=np.array([[detectedLocation.get_Longitude(), detectedLocation.get_Latitude()]]), Y=np.array([1]), win=VIZ_SCATTER, update='append')
-        if isinstance(lmcpObject, SessionStatus):
-            session_status: SessionStatus = lmcpObject
-            self.current_time = session_status.get_ScenarioTime()
-            state: SimulationStatusType.SimulationStatusType = session_status.get_State()
-            if state is SimulationStatusType.SimulationStatusType.Reset or state is SimulationStatusType.SimulationStatusType.Stopped:
-                self.viz.close(win=HEATMAP)
-                self.viz.close(win=VIZ_SCATTER)
-                self.viz.close(win=CONTOUR)
-                self.heatmap = np.zeros((100, 100))
-            delta_time = session_status.ScenarioTime - self.current_time
-            self.current_time = session_status.ScenarioTime
-            # self.heatmap = self.update_heatmap(delta_time)
-            self.communication_channel.send(self.current_time, self.heatmap)
-            self.convex_hull()
+                pass
+            if isinstance(lmcpObject, HazardZoneDetection):
+                hazardDetected: HazardZoneDetection = lmcpObject
+                # Get location where zone first detected
+                detectedLocation = hazardDetected.get_DetectedLocation()
+                lat, long = self.normalise_coordinates(detectedLocation)
+                detecting_id = hazardDetected.DetectingEnitiyID
+                try:
+                    self.heatmap[lat][long] = 1.0
+                    self.apply_smoothing()
+                except Exception as ex:
+                    print(ex)
+                # self.viz.contour(X=self.heatmap, win=self.contour, opts=dict(title='Contour plot'))
+                self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
+                self.viz.contour(X=self.smooth, win=CONTOUR, opts=dict(title='Contour plot'))
+        except Exception as ex:
+            print(ex)
+
+    def apply_smoothing(self):
+        self.smooth = ndimage.gaussian_filter(self.heatmap, 10)
+        pass
 
     def normalise_coordinates(self, detectedLocation):
         lat = int((detectedLocation.get_Latitude() - self.min_lat) / (self.max_lat - self.min_lat) * self.heatmap.shape[0])
