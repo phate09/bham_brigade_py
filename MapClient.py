@@ -105,7 +105,7 @@ class SampleHazardDetector(IDataReceived):
                 delta_time = session_status.ScenarioTime - self.current_time
                 self.current_time = session_status.ScenarioTime
                 # self.heatmap = self.update_heatmap(delta_time)
-                self.communication_channel.send(self.current_time, self.heatmap)
+                self.communication_channel.send(self.current_time, self.heatmap, self.max_lat, self.max_long, self.min_lat, self.min_long)
                 self.convex_hull()
             if isinstance(lmcpObject, AirVehicleState):
                 vehicleState: AirVehicleState = lmcpObject
