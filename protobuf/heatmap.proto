@@ -2,10 +2,11 @@ syntax = "proto3";
 //import "google/protobuf/timestamp.proto";
 message Heatmap {
     uint32 time = 1;
-    repeated int32 size = 2;
-    repeated double map = 3 [packed = true]; //stores the map as a linear array that needs to be unpacked
-    uint32 max_lat = 4;
-    uint32 max_long = 5;
-    uint32 min_lat = 6;
-    uint32 min_long = 7;
+    uint32 max_lat = 2;
+    uint32 max_long = 3;
+    uint32 min_lat = 4;
+    uint32 min_long = 5;
+    repeated int32 size = 6;
+    repeated double map = 7 [packed = true]; //stores the map as a linear array that needs to be unpacked
+
 }
