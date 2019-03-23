@@ -58,6 +58,26 @@ public final class HeatmapOuterClass {
      * <code>repeated double map = 3 [packed = true];</code>
      */
     double getMap(int index);
+
+    /**
+     * <code>uint32 max_lat = 4;</code>
+     */
+    int getMaxLat();
+
+    /**
+     * <code>uint32 max_long = 5;</code>
+     */
+    int getMaxLong();
+
+    /**
+     * <code>uint32 min_lat = 6;</code>
+     */
+    int getMinLat();
+
+    /**
+     * <code>uint32 min_long = 7;</code>
+     */
+    int getMinLong();
   }
   /**
    * <pre>
@@ -79,6 +99,10 @@ public final class HeatmapOuterClass {
       time_ = 0;
       size_ = java.util.Collections.emptyList();
       map_ = java.util.Collections.emptyList();
+      maxLat_ = 0;
+      maxLong_ = 0;
+      minLat_ = 0;
+      minLong_ = 0;
     }
 
     @java.lang.Override
@@ -150,6 +174,26 @@ public final class HeatmapOuterClass {
                 map_.add(input.readDouble());
               }
               input.popLimit(limit);
+              break;
+            }
+            case 32: {
+
+              maxLat_ = input.readUInt32();
+              break;
+            }
+            case 40: {
+
+              maxLong_ = input.readUInt32();
+              break;
+            }
+            case 48: {
+
+              minLat_ = input.readUInt32();
+              break;
+            }
+            case 56: {
+
+              minLong_ = input.readUInt32();
               break;
             }
             default: {
@@ -258,6 +302,42 @@ public final class HeatmapOuterClass {
     }
     private int mapMemoizedSerializedSize = -1;
 
+    public static final int MAX_LAT_FIELD_NUMBER = 4;
+    private int maxLat_;
+    /**
+     * <code>uint32 max_lat = 4;</code>
+     */
+    public int getMaxLat() {
+      return maxLat_;
+    }
+
+    public static final int MAX_LONG_FIELD_NUMBER = 5;
+    private int maxLong_;
+    /**
+     * <code>uint32 max_long = 5;</code>
+     */
+    public int getMaxLong() {
+      return maxLong_;
+    }
+
+    public static final int MIN_LAT_FIELD_NUMBER = 6;
+    private int minLat_;
+    /**
+     * <code>uint32 min_lat = 6;</code>
+     */
+    public int getMinLat() {
+      return minLat_;
+    }
+
+    public static final int MIN_LONG_FIELD_NUMBER = 7;
+    private int minLong_;
+    /**
+     * <code>uint32 min_long = 7;</code>
+     */
+    public int getMinLong() {
+      return minLong_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -289,6 +369,18 @@ public final class HeatmapOuterClass {
       }
       for (int i = 0; i < map_.size(); i++) {
         output.writeDoubleNoTag(map_.get(i));
+      }
+      if (maxLat_ != 0) {
+        output.writeUInt32(4, maxLat_);
+      }
+      if (maxLong_ != 0) {
+        output.writeUInt32(5, maxLong_);
+      }
+      if (minLat_ != 0) {
+        output.writeUInt32(6, minLat_);
+      }
+      if (minLong_ != 0) {
+        output.writeUInt32(7, minLong_);
       }
       unknownFields.writeTo(output);
     }
@@ -328,6 +420,22 @@ public final class HeatmapOuterClass {
         }
         mapMemoizedSerializedSize = dataSize;
       }
+      if (maxLat_ != 0) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(4, maxLat_);
+      }
+      if (maxLong_ != 0) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(5, maxLong_);
+      }
+      if (minLat_ != 0) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(6, minLat_);
+      }
+      if (minLong_ != 0) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(7, minLong_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -350,6 +458,14 @@ public final class HeatmapOuterClass {
           .equals(other.getSizeList());
       result = result && getMapList()
           .equals(other.getMapList());
+      result = result && (getMaxLat()
+          == other.getMaxLat());
+      result = result && (getMaxLong()
+          == other.getMaxLong());
+      result = result && (getMinLat()
+          == other.getMinLat());
+      result = result && (getMinLong()
+          == other.getMinLong());
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -371,6 +487,14 @@ public final class HeatmapOuterClass {
         hash = (37 * hash) + MAP_FIELD_NUMBER;
         hash = (53 * hash) + getMapList().hashCode();
       }
+      hash = (37 * hash) + MAX_LAT_FIELD_NUMBER;
+      hash = (53 * hash) + getMaxLat();
+      hash = (37 * hash) + MAX_LONG_FIELD_NUMBER;
+      hash = (53 * hash) + getMaxLong();
+      hash = (37 * hash) + MIN_LAT_FIELD_NUMBER;
+      hash = (53 * hash) + getMinLat();
+      hash = (37 * hash) + MIN_LONG_FIELD_NUMBER;
+      hash = (53 * hash) + getMinLong();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -514,6 +638,14 @@ public final class HeatmapOuterClass {
         bitField0_ = (bitField0_ & ~0x00000002);
         map_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000004);
+        maxLat_ = 0;
+
+        maxLong_ = 0;
+
+        minLat_ = 0;
+
+        minLong_ = 0;
+
         return this;
       }
 
@@ -553,6 +685,10 @@ public final class HeatmapOuterClass {
           bitField0_ = (bitField0_ & ~0x00000004);
         }
         result.map_ = map_;
+        result.maxLat_ = maxLat_;
+        result.maxLong_ = maxLong_;
+        result.minLat_ = minLat_;
+        result.minLong_ = minLong_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -624,6 +760,18 @@ public final class HeatmapOuterClass {
             map_.addAll(other.map_);
           }
           onChanged();
+        }
+        if (other.getMaxLat() != 0) {
+          setMaxLat(other.getMaxLat());
+        }
+        if (other.getMaxLong() != 0) {
+          setMaxLong(other.getMaxLong());
+        }
+        if (other.getMinLat() != 0) {
+          setMinLat(other.getMinLat());
+        }
+        if (other.getMinLong() != 0) {
+          setMinLong(other.getMinLong());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -840,6 +988,110 @@ public final class HeatmapOuterClass {
         onChanged();
         return this;
       }
+
+      private int maxLat_ ;
+      /**
+       * <code>uint32 max_lat = 4;</code>
+       */
+      public int getMaxLat() {
+        return maxLat_;
+      }
+      /**
+       * <code>uint32 max_lat = 4;</code>
+       */
+      public Builder setMaxLat(int value) {
+        
+        maxLat_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>uint32 max_lat = 4;</code>
+       */
+      public Builder clearMaxLat() {
+        
+        maxLat_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private int maxLong_ ;
+      /**
+       * <code>uint32 max_long = 5;</code>
+       */
+      public int getMaxLong() {
+        return maxLong_;
+      }
+      /**
+       * <code>uint32 max_long = 5;</code>
+       */
+      public Builder setMaxLong(int value) {
+        
+        maxLong_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>uint32 max_long = 5;</code>
+       */
+      public Builder clearMaxLong() {
+        
+        maxLong_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private int minLat_ ;
+      /**
+       * <code>uint32 min_lat = 6;</code>
+       */
+      public int getMinLat() {
+        return minLat_;
+      }
+      /**
+       * <code>uint32 min_lat = 6;</code>
+       */
+      public Builder setMinLat(int value) {
+        
+        minLat_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>uint32 min_lat = 6;</code>
+       */
+      public Builder clearMinLat() {
+        
+        minLat_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private int minLong_ ;
+      /**
+       * <code>uint32 min_long = 7;</code>
+       */
+      public int getMinLong() {
+        return minLong_;
+      }
+      /**
+       * <code>uint32 min_long = 7;</code>
+       */
+      public Builder setMinLong(int value) {
+        
+        minLong_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>uint32 min_long = 7;</code>
+       */
+      public Builder clearMinLong() {
+        
+        minLong_ = 0;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -907,9 +1159,10 @@ public final class HeatmapOuterClass {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\026protobuf/heatmap.proto\"6\n\007Heatmap\022\014\n\004t" +
+      "\n\026protobuf/heatmap.proto\"|\n\007Heatmap\022\014\n\004t" +
       "ime\030\001 \001(\r\022\014\n\004size\030\002 \003(\005\022\017\n\003map\030\003 \003(\001B\002\020\001" +
-      "b\006proto3"
+      "\022\017\n\007max_lat\030\004 \001(\r\022\020\n\010max_long\030\005 \001(\r\022\017\n\007m" +
+      "in_lat\030\006 \001(\r\022\020\n\010min_long\030\007 \001(\rb\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -928,7 +1181,7 @@ public final class HeatmapOuterClass {
     internal_static_Heatmap_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Heatmap_descriptor,
-        new java.lang.String[] { "Time", "Size", "Map", });
+        new java.lang.String[] { "Time", "Size", "Map", "MaxLat", "MaxLong", "MinLat", "MinLong", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

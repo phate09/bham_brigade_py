@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x16protobuf/heatmap.proto\"6\n\x07Heatmap\x12\x0c\n\x04time\x18\x01 \x01(\r\x12\x0c\n\x04size\x18\x02 \x03(\x05\x12\x0f\n\x03map\x18\x03 \x03(\x01\x42\x02\x10\x01\x62\x06proto3')
+  serialized_pb=_b('\n\x16protobuf/heatmap.proto\"|\n\x07Heatmap\x12\x0c\n\x04time\x18\x01 \x01(\r\x12\x0c\n\x04size\x18\x02 \x03(\x05\x12\x0f\n\x03map\x18\x03 \x03(\x01\x42\x02\x10\x01\x12\x0f\n\x07max_lat\x18\x04 \x01(\r\x12\x10\n\x08max_long\x18\x05 \x01(\r\x12\x0f\n\x07min_lat\x18\x06 \x01(\r\x12\x10\n\x08min_long\x18\x07 \x01(\rb\x06proto3')
 )
 
 
@@ -53,6 +53,34 @@ _HEATMAP = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=_b('\020\001'), file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='max_lat', full_name='Heatmap.max_lat', index=3,
+      number=4, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='max_long', full_name='Heatmap.max_long', index=4,
+      number=5, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='min_lat', full_name='Heatmap.min_lat', index=5,
+      number=6, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='min_long', full_name='Heatmap.min_long', index=6,
+      number=7, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -66,7 +94,7 @@ _HEATMAP = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=26,
-  serialized_end=80,
+  serialized_end=150,
 )
 
 DESCRIPTOR.message_types_by_name['Heatmap'] = _HEATMAP
