@@ -102,6 +102,8 @@ class SampleHazardDetector(IDataReceived):
                                 self.filename = param.Value.decode("utf-8")
                     if self.filename is not None:
                         self.load_scenario(self.filename)
+                if self.filename is None: #only move on when the scenario is ready
+                    return
                 delta_time = session_status.ScenarioTime - self.current_time
                 self.current_time = session_status.ScenarioTime
                 # self.heatmap = self.update_heatmap(delta_time)

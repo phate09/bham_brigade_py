@@ -12,14 +12,23 @@ class HeatmapListener:
         self.socket = self.context.socket(zmq.SUB)
         self.socket.connect("tcp://localhost:5556")
         filter="" #filters out a specific type of message
-        self.socket.setsockopt_string(zmq.SUBSCRIBE, filter)
+        # filter = filter.decode('ascii')
+        self.socket.setsockopt_string(zmq.SUBSCRIBE, '')
 
     def start(self):
         while(True):
-            recv_string = self.socket.recv_string()#receive the string from the channel
-            heatmap:heatmap_pb2.Heatmap = heatmap_pb2.Heatmap() #creates the heatmap object
-            heatmap.ParseFromString(recv_string) #fills it with the data
+            message = self.socket.recv()#receive the string from the channel
+            heatmap: heatmap_pb2.Heatmap = heatmap_pb2.Heatmap()  # creates the heatmap object
+            heatmap.ParseFromString(message)
+             #fills it with the data
             self.onMessageReceived(heatmap)
-
+    # def deserialize(self,object):
+    #     heatmap: heatmap_pb2.Heatmap = heatmap_pb2.Heatmap()  # creates the heatmap object
+    #     heatmap.ParseFromString(object)
     def onMessageReceived(self,heatmap:heatmap_pb2.Heatmap):
+        print(heatmap)
         pass #fills it with the method to consume the heatmap
+
+if __name__ == '__main__':
+    listener= HeatmapListener()
+    listener.start()
