@@ -56,17 +56,12 @@ class SampleHazardDetector(IDataReceived):
         self.__client = tcpClient
         self.__uavsLoiter = {}
         self.__estimatedHazardZone = Polygon()
-        # self.filename = '/home/edoardo/Development/amase-firehack/example scenarios/HazardZoneDetectionScenario.xml'
-        # self.load_scenario(self.filename)
         self.filename = None
-        self.coordinates = []
-        self.heatmap = np.zeros((100, 100))
+        self.heatmap = np.zeros((100, 100)) #the places where the fire was detected
+        self.last_detected = np.zeros((100,100)) #the time at which the fire was last detected (or not) in that cell
         self.smooth = np.zeros((100, 100))
         self.drones_status = {}
         self.communication_channel = protobuf.communication_client.CommunicationChannel()
-        # self.contour = self.viz.contour(X=self.heatmap, opts=dict(title='Contour plot'))
-        # self.viz_heatmap = self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
-        # self.viz_scatter = self.viz.scatter(X=np.array([]), Y=np.array([]))
 
     def load_scenario(self, filename):
         self.scenario = minidom.parse(filename)
@@ -74,8 +69,6 @@ class SampleHazardDetector(IDataReceived):
         self.latitude = float(simulation_view_node[0].attributes['Latitude'].value)
         self.longitude = float(simulation_view_node[0].attributes['Longitude'].value)
         self.long_extent = float(simulation_view_node[0].attributes['LongExtent'].value)
-        # self.centre_lat = self.latitude / 2
-        # self.centre_long = self.longitude / 2
         self.max_lat = self.latitude + self.long_extent
         self.min_lat = self.latitude - self.long_extent
         self.max_long = self.longitude + self.long_extent
@@ -83,10 +76,9 @@ class SampleHazardDetector(IDataReceived):
 
     def dataReceived(self, lmcpObject):
         try:
-
             if isinstance(lmcpObject, SessionStatus):
                 session_status: SessionStatus = lmcpObject
-                self.current_time = session_status.get_ScenarioTime()
+                self.current_time = session_status.get_ScenarioTime()#save the last registered time to use in other parts of the code
                 state: SimulationStatusType.SimulationStatusType = session_status.get_State()
                 if state is SimulationStatusType.SimulationStatusType.Reset:
                     self.viz.close(win=HEATMAP)
@@ -102,7 +94,7 @@ class SampleHazardDetector(IDataReceived):
                                 self.filename = param.Value.decode("utf-8")
                     if self.filename is not None:
                         self.load_scenario(self.filename)
-                if self.filename is None: #only move on when the scenario is ready
+                if self.filename is None:  # only move on when the scenario is ready
                     return
                 delta_time = session_status.ScenarioTime - self.current_time
                 self.current_time = session_status.ScenarioTime
@@ -115,11 +107,7 @@ class SampleHazardDetector(IDataReceived):
                 heading = vehicleState.Heading
                 location: Location3D = vehicleState.get_Location()
                 self.drones_status[id] = (heading, location)
-                # matplotlib demo:
                 try:
-                    # import matplotlib
-                    # matplotlib.use('Agg')
-                    # import matplotlib.pyplot as plt
                     locations = []
                     y = []
                     markers = []
@@ -131,8 +119,6 @@ class SampleHazardDetector(IDataReceived):
                         y.append([1])
                         heading = (360.0 - heading) % 360.0  # counterclockwise to clockwise
                         markers.append((3, 0, heading))
-                        # plt.plot(location.get_Longitude(), location.get_Latitude(), marker=(3, 0, heading), markersize=20, linestyle='None')
-                    # plot = plt.plot(locations, y, markers, markersize=20, linestyle='None')
                     self.viz.scatter(X=np.array(locations), Y=np.array(y), win=VIZ_SCATTER, opts=dict(
                         xtickmin=self.min_long,
                         xtickmax=self.max_long,
@@ -142,10 +128,6 @@ class SampleHazardDetector(IDataReceived):
                         markersize=10,
                         linestyle='None'
                     ))
-                    # plt.xlim([self.min_long, self.max_long])
-                    # plt.ylim([self.min_lat, self.max_lat])
-                    # self.viz.matplot(plot=plt, win="Trajectory")#opts=dict(resizable=True)
-                    # plt.close()
                 except BaseException as err:
                     print('Skipped matplotlib example')
                     print('Error message: ', err)
@@ -157,9 +139,12 @@ class SampleHazardDetector(IDataReceived):
                 detectedLocation = hazardDetected.get_DetectedLocation()
                 lat, long = self.normalise_coordinates(detectedLocation)
                 detecting_id = hazardDetected.DetectingEnitiyID
+                hazardDetected_flag = True
                 try:
                     self.heatmap[lat][long] = 1.0
+                    self.last_detected[lat][long]=self.current_time #the last registered time
                     self.apply_smoothing()
+
                 except Exception as ex:
                     print(ex)
                 # self.viz.contour(X=self.heatmap, win=self.contour, opts=dict(title='Contour plot'))
