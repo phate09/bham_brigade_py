@@ -25,6 +25,8 @@ import protobuf.communication_client
 from scipy.spatial import ConvexHull
 from scipy import ndimage
 
+import calculate_polygons
+
 CONTOUR = "contour"
 
 VIZ_SCATTER = "viz_scatter"
@@ -184,31 +186,7 @@ class SampleHazardDetector(IDataReceived):
         Updates the heatmap and returns a new heatmap
         """
 
-    # def convex_hull(self):
-    #     """
-    #     Generates the convex hull from the point cloud
-    #     :return:
-    #     """
-    #     coords = []
-    #     for row in range(self.heatmap.shape[0]):
-    #         for col in range(self.heatmap.shape[1]):
-    #             if self.heatmap[row][col] > 0.95: # This could be a 1 check but we are pre-empting expanding this for decay.
-    #                 coords.append((row, col))
-    #     if len(coords) < 3:
-    #         return
-    #     try:
-    #         poly = ConvexHull(coords)
-    #         self.__estimatedHazardZone.get_BoundaryPoints().clear()
-    #         for index in poly.vertices:
-    #             point = Location3D()
-    #             lat, long = self.denormalise_coordinates(poly.points[index][0], poly.points[index][1])
-    #             point.set_Latitude(lat)
-    #             point.set_Longitude(long)
-    #             # point.set_Latitude(index.)
-    #             self.__estimatedHazardZone.get_BoundaryPoints().append(point)
-    #         self.sendEstimateReport()
-    #     except Exception as ex:
-    #         print(ex)
+
 
     def compute_coords(self):
         coords = []
@@ -221,30 +199,33 @@ class SampleHazardDetector(IDataReceived):
 
     def set_coord_as_hazard_zone(self, norm_poly):
         self.__estimatedHazardZone.get_BoundaryPoints().clear()
-        for index in norm_poly.vertices:
-            point = Location3D()
-            lat, long = self.denormalise_coordinates(norm_poly.points[index][0], norm_poly.points[index][1])
-            point.set_Latitude(lat)
-            point.set_Longitude(long)
+        for point in norm_poly.points:
+            denormalised_point = Location3D()
+            lat, long = self.denormalise_coordinates(point[0], point[1])
+            denormalised_point.set_Latitude(lat)
             # point.set_Latitude(index.)
-            self.__estimatedHazardZone.get_BoundaryPoints().append(point)
+            self.__estimatedHazardZone.get_BoundaryPoints().append(denormalised_point)
 
 
     def compute_and_send_estimate(self):
         coords = self.compute_coords()
 
+        # Simple triangle
         if len(coords) < 3:
             return
 
         try:
             # Different options to create polygon.
-            norm_poly = ConvexHull(coords)
+            norm_polys = calculate_polygons.calculate_polygons(coords)
 
+            # For now just get first polygon.
+            norm_poly = norm_polys[0]
 
             self.set_coord_as_hazard_zone(norm_poly)
             self.sendEstimateReport()
         except Exception as ex:
-            print(ex)
+            raise ex
+            #print(ex)
 
 
     def sendLoiterCommand(self, vehicleId, location):
@@ -285,6 +266,8 @@ class SampleHazardDetector(IDataReceived):
 
         # Sending the Vehicle Action Command message to AMASE to be interpreted
         self.__client.sendLMCPObject(hazardZoneEstimateReport)
+
+
 
 
 #################
