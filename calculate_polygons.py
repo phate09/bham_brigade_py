@@ -55,8 +55,8 @@ def calculate_polygons(coords):
     print("convex hull")
     polygons_list_1 = calculate_convex_hull_polygon(coords)
 
-    print("alpha")
-    polygon_list = calculate_alpha_shape_polygons(coords)
+    #print("alpha")
+    #polygon_list = calculate_alpha_shape_polygons(coords)
 
     print(polygons_list_1)
     #print(polygons_list)
