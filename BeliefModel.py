@@ -16,12 +16,14 @@ class BeliefModel:
         self.attention_window_size = 100  # number of elements to store in the attention window
 
     def score_growth(self, point):
+        #todo check no mistakes
         last_polygon = self.polygons[-1]
         distance_from_hull, closest_point = self.distance_from_hull(last_polygon, point)
         inside = -1 if last_polygon.contains(point) == True else 1
         return distance_from_hull * inside
 
     def score_translation(self, point):
+        #todo do this
         pass
 
     def score_angle(self, point):
@@ -34,6 +36,7 @@ class BeliefModel:
 
         if r < 0:
             r += 360.0
+        #todo check this method works
         return r
 
     def aggregate(self, function):
@@ -48,7 +51,9 @@ class BeliefModel:
 
     def update_beliefs(self, heatmap,last_detected):
         '''updates all the beliefs based on the new population, the population is inferred from the heatmap and last detected array'''
-        self.attention_window = self.get_points_population(heatmap,last_detected)
+        self.attention_window = self.get_points_population(heatmap,last_detected) #gets the population
+
+        #updates the estimates
         self.growth_mean, self.growth_std = self.aggregate(self.score_growth)
         self.translation_mean, self.translation_std = self.aggregate(self.score_translation)
         self.angle_mean, self.angle_std = self.aggregate(self.score_angle)
@@ -65,6 +70,7 @@ class BeliefModel:
         return dist, points[index]
 
     def get_points_population(self, heatmap, last_detected):
+        '''gets the population from the heatmap'''
         coords = []
         last_seen_list = []
         for row in range(heatmap.shape[0]):
@@ -77,6 +83,7 @@ class BeliefModel:
         return population
 
     def dist(self, x1, y1, x2, y2, x3, y3):  # x3,y3 is the point
+        '''calculates the distance between a line and a point'''
         px = x2 - x1
         py = y2 - y1
 

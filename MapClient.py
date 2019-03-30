@@ -2,6 +2,7 @@ from BeliefModel import BeliefModel
 from afrl.cmasi.AirVehicleState import AirVehicleState
 from afrl.cmasi.KeyValuePair import KeyValuePair
 from afrl.cmasi.SessionStatus import SessionStatus, SimulationStatusType
+from afrl.cmasi.searchai.HazardZone import HazardZone
 from amase.TCPClient import AmaseTCPClient
 from amase.TCPClient import IDataReceived
 from afrl.cmasi.searchai.HazardZoneEstimateReport import HazardZoneEstimateReport
@@ -51,6 +52,7 @@ class SampleHazardDetector(IDataReceived):
                             help='Server address of the target to run the demo on.')
         FLAGS = parser.parse_args()
         self.viz = Visdom(port=FLAGS.port, server=FLAGS.server)
+        self.fake_point = False  # wether import the boundaries of the fire from the xml
 
         assert self.viz.check_connection(timeout_seconds=3), 'No connection could be formed quickly, remember to run \'visdom\' in the terminal'
 
@@ -58,8 +60,8 @@ class SampleHazardDetector(IDataReceived):
         self.__uavsLoiter = {}
         self.__estimatedHazardZone = Polygon()
         self.filename = None
-        self.heatmap = np.zeros((100, 100)) #the places where the fire was detected
-        self.last_detected = np.zeros((100,100)) #the time at which the fire was last detected (or not) in that cell
+        self.heatmap = np.zeros((100, 100))  # the places where the fire was detected
+        self.last_detected = np.zeros((100, 100))  # the time at which the fire was last detected (or not) in that cell
         self.smooth = np.zeros((100, 100))
         self.drones_status = {}
         self.communication_channel = protobuf.communication_client.CommunicationChannel()
@@ -75,12 +77,34 @@ class SampleHazardDetector(IDataReceived):
         self.min_lat = self.latitude - self.long_extent
         self.max_long = self.longitude + self.long_extent
         self.min_long = self.longitude - self.long_extent
+        if self.fake_point:
+            self.fake_points(filename)
+
+    def fake_points(self, filename):
+        self.scenario = minidom.parse(filename)
+        hazardZone_node = self.scenario.getElementsByTagName('HazardZone')
+        boundary_points = hazardZone_node[0].getElementsByTagName('Location3D')
+        for point_string in boundary_points:
+            latitude = float(point_string.getElementsByTagName('Latitude')[0].childNodes[0].nodeValue)
+            longitude = float(point_string.getElementsByTagName('Longitude')[0].childNodes[0].nodeValue)
+            location = Location3D()
+            location.set_Latitude(latitude)
+            location.set_Longitude(longitude)
+            lat, long = self.normalise_coordinates(location)
+            try:
+                self.heatmap[lat][long] = 1.0
+                self.last_detected[lat][long] = self.current_time  # the last registered time
+
+            except Exception as ex:
+                print(ex)
+        self.apply_smoothing()
+        self.update_visdom()
 
     def dataReceived(self, lmcpObject):
         try:
             if isinstance(lmcpObject, SessionStatus):
                 session_status: SessionStatus = lmcpObject
-                self.current_time = session_status.get_ScenarioTime()#save the last registered time to use in other parts of the code
+                self.current_time = session_status.get_ScenarioTime()  # save the last registered time to use in other parts of the code
                 state: SimulationStatusType.SimulationStatusType = session_status.get_State()
                 if state is SimulationStatusType.SimulationStatusType.Reset:
                     self.viz.close(win=HEATMAP)
@@ -146,16 +170,34 @@ class SampleHazardDetector(IDataReceived):
                 detecting_id = hazardDetected.DetectingEnitiyID
                 try:
                     self.heatmap[lat][long] = 1.0
-                    self.last_detected[lat][long]=self.current_time #the last registered time
+                    self.last_detected[lat][long] = self.current_time  # the last registered time
                     self.apply_smoothing()
 
                 except Exception as ex:
                     print(ex)
                 # self.viz.contour(X=self.heatmap, win=self.contour, opts=dict(title='Contour plot'))
-                self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
-                self.viz.contour(X=self.smooth, win=CONTOUR, opts=dict(title='Contour plot'))
+                self.update_visdom()
+            if isinstance(lmcpObject, HazardZone):
+                '''here it fake the points for debugging purporses taking them from the hazardzone message'''
+                hazardZone: HazardZone = lmcpObject
+                polygon: Polygon = hazardZone.get_Boundary()
+                points = polygon.get_BoundaryPoints()
+                for detectedLocation in points:
+                    lat, long = self.normalise_coordinates(detectedLocation)
+                    try:
+                        self.heatmap[lat][long] = 1.0
+                        self.last_detected[lat][long] = self.current_time  # the last registered time
+                        self.apply_smoothing()
+
+                    except Exception as ex:
+                        print(ex)
+
         except Exception as ex:
             print(ex)
+
+    def update_visdom(self):
+        self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
+        self.viz.contour(X=self.smooth, win=CONTOUR, opts=dict(title='Contour plot'))
 
     def apply_smoothing(self):
         self.smooth = ndimage.gaussian_filter(self.heatmap, 10)
@@ -203,11 +245,12 @@ class SampleHazardDetector(IDataReceived):
     #         print(ex)
 
     '''gets the points in the heatmap where there is fire'''
+
     def compute_coords(self):
         coords = []
         for row in range(self.heatmap.shape[0]):
             for col in range(self.heatmap.shape[1]):
-                if self.heatmap[row][col] > 0.95: # This could be a 1 check but we are pre-empting expanding this for decay.
+                if self.heatmap[row][col] > 0.95:  # This could be a 1 check but we are pre-empting expanding this for decay.
                     coords.append((row, col))
 
         return coords
@@ -221,7 +264,6 @@ class SampleHazardDetector(IDataReceived):
             point.set_Longitude(long)
             # point.set_Latitude(index.)
             self.__estimatedHazardZone.get_BoundaryPoints().append(point)
-
 
     def compute_and_send_estimate(self):
         coords = self.compute_coords()
@@ -238,7 +280,6 @@ class SampleHazardDetector(IDataReceived):
             self.sendEstimateReport()
         except Exception as ex:
             print(ex)
-
 
     def sendLoiterCommand(self, vehicleId, location):
         # Setting up the mission to send to the UAV
