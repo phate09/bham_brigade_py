@@ -13,7 +13,6 @@ import numpy as np
 from shapely.ops import cascaded_union, polygonize
 import shapely.geometry as geometry
 
-
 class FHPolygon():
     # Array of 2D points
     def __init__(self):
@@ -21,6 +20,11 @@ class FHPolygon():
 
 
 def calculate_convex_hull_polygon(coords):
+    if len(coords) < 4:
+        fhpolygon = FHPolygon()
+        fhpolygon.points = coords
+        return [fhpolygon]
+
     convexHull = ConvexHull(coords)
 
     fhpolygon = FHPolygon()
@@ -61,9 +65,8 @@ def cluster_points(coords, n_clusters):
     clusters = [[] for i in range(n_clusters)]
 
     for point, label in zip(coords, k_means_labels):
-        clusters[label] += point
+        clusters[label].append(point)
 
-    print("Clusters Done")
     return clusters
 
 
@@ -101,6 +104,8 @@ def calculate_k_means_polygons(coords):
 
     for cluster in clusters:
         polygon_list += calculate_convex_hull_polygon(cluster)
+
+    return polygon_list
 
 
 def calculate_polygons(coords):
