@@ -1,3 +1,10 @@
-shapely
-scikit-learn
-numpy
+name: bham_brigade_py
+
+dependencies:
+-shapely
+-scikit-learn
+-numpy
+-protobuf
+- pip:
+    - pyzmq==18.0.1
+    - visdom==0.1.8.8
