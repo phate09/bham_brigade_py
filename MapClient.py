@@ -46,7 +46,7 @@ class SampleHazardDetector(IDataReceived):
                             help='Server address of the target to run the demo on.')
         FLAGS = parser.parse_args()
         self.viz = Visdom(port=FLAGS.port, server=FLAGS.server)
-        self.fake_point = True  # whether import the boundaries of the fire from the xml
+        self.fake_point = False  # whether import the boundaries of the fire from the xml
         self.last_refresh = 0
         self.new_points_detected = False
 
