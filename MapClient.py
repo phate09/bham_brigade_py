@@ -257,11 +257,12 @@ class SampleHazardDetector(IDataReceived):
             norm_polys = calculate_polygons.calculate_polygons(coords)
             #norm_poly = ConvexHull(coords)
             # For now just get first polygon.
-            norm_poly = norm_polys[0]
-            self.belief_model.polygons.append(norm_poly)
+            for index,poly in enumerate(norm_polys):
+            # norm_poly = norm_polys[0]
+                self.belief_model.polygons.append(poly)
 
-            self.set_coord_as_hazard_zone(norm_poly)
-            self.sendEstimateReport()
+                self.set_coord_as_hazard_zone(poly)
+                self.sendEstimateReport(index)
         except Exception as ex:
             raise ex
             #print(ex)
@@ -292,11 +293,11 @@ class SampleHazardDetector(IDataReceived):
         # Sending the Vehicle Action Command message to AMASE to be interpreted
         self.__client.sendLMCPObject(vehicleActionCommand)
 
-    def sendEstimateReport(self):
+    def sendEstimateReport(self,id=1):
         # Setting up the mission to send to the UAV
         hazardZoneEstimateReport = HazardZoneEstimateReport()
         hazardZoneEstimateReport.set_EstimatedZoneShape(self.__estimatedHazardZone)
-        hazardZoneEstimateReport.set_UniqueTrackingID(1)
+        hazardZoneEstimateReport.set_UniqueTrackingID(id)
         hazardZoneEstimateReport.set_EstimatedGrowthRate(0)
         hazardZoneEstimateReport.set_PerceivedZoneType(HazardType.Fire)
         hazardZoneEstimateReport.set_EstimatedZoneDirection(0)

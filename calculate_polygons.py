@@ -52,14 +52,14 @@ def calculate_alpha_shape_polygons(coords):
 def calculate_polygons(coords):
     # Choice of methods to compute polygon.
 
-    # print("convex hull")
-    # polygons_list_1 = calculate_convex_hull_polygon(coords)
-
-    print("alpha")
-    polygons_list = calculate_alpha_shape_polygons(coords)
+    print("convex hull")
+    polygons_list = calculate_convex_hull_polygon(coords)
+    #
+    # print("alpha")
+    # polygons_list = calculate_alpha_shape_polygons(coords)
 
     # print(polygons_list_1)
-    print(polygons_list)
+    # print(polygons_list)
 
     return polygons_list
 
@@ -80,7 +80,7 @@ def add_edge(edges, edge_points, coords, i, j):
     edges.add((i, j))
     edge_points.append(coords[[i, j]])
 
-def alpha_shape(points, alpha=1):
+def alpha_shape(points, alpha=0.1):
     """
     Compute the alpha shape (concave hull) of a set
     of points.
