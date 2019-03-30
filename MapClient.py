@@ -26,6 +26,7 @@ import numpy as np
 import protobuf.communication_client
 from scipy.spatial import ConvexHull
 from scipy import ndimage
+import math
 
 import calculate_polygons
 
@@ -79,8 +80,37 @@ class SampleHazardDetector(IDataReceived):
         self.min_lat = self.latitude - self.long_extent
         self.max_long = self.longitude + self.long_extent
         self.min_long = self.longitude - self.long_extent
+        keep_in_zone = self.scenario.getElementsByTagName('KeepInZone')
+        if len(keep_in_zone) > 0: #if there is a keep in zone then constraint to that
+            self.latitude = float(keep_in_zone[0].getElementsByTagName('Latitude')[0].childNodes[0].nodeValue)
+            self.longitude = float(keep_in_zone[0].getElementsByTagName('Longitude')[0].childNodes[0].nodeValue)
+            width = float(keep_in_zone[0].getElementsByTagName('Width')[0].childNodes[0].nodeValue)
+            height = float(keep_in_zone[0].getElementsByTagName('Height')[0].childNodes[0].nodeValue)
+            centerPoint = Location3D()
+            centerPoint.set_Latitude(self.latitude)
+            centerPoint.set_Longitude(self.longitude)
+            low_loc:Location3D = self.newLocation(centerPoint, height / -2, width / -2)
+            high_loc:Location3D = self.newLocation(centerPoint, height / 2, width / 2)
+            self.max_lat= max(low_loc.get_Latitude(),high_loc.get_Latitude())
+            self.max_long= max(low_loc.get_Longitude(),high_loc.get_Longitude())
+            self.min_lat= min(low_loc.get_Latitude(),high_loc.get_Latitude())
+            self.min_long= min(low_loc.get_Longitude(),high_loc.get_Longitude())
+
         if self.fake_point:
             self.fake_points()
+
+    def newLocation(self, loc: Location3D, dx, dy):
+        R_EARTHKM = 6372.8
+        latitude = loc.get_Latitude()
+        longitude = loc.get_Longitude()
+        new_latitude = latitude + (dy / (R_EARTHKM * 1000)) * (180 / math.pi)
+
+        new_longitude = longitude + (dx / (R_EARTHKM * 1000)) * (180 / math.pi) / math.cos(latitude * math.pi / 180)
+
+        new_location = Location3D()
+        new_location.set_Latitude(new_latitude)
+        new_location.set_Longitude(new_longitude)
+        return new_location
 
     def fake_points(self):
         hazardZone_nodes = self.scenario.getElementsByTagName('HazardZone')
