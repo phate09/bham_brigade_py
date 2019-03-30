@@ -96,7 +96,7 @@ def calculate_k_means_polygons(coords):
     points, labels = k_means_clustering(coords, k)  # performs k means
     clusters = [[] for i in range(k)]  # generate list of lists
     for point, label in zip(points, labels):  # assign every point to it's coordinate
-        clusters[label] += point
+        clusters[label].append(point)
 
     # clusters = cluster_points(coords, k)
 

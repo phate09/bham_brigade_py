@@ -54,7 +54,7 @@ class SampleHazardDetector(IDataReceived):
                             help='Server address of the target to run the demo on.')
         FLAGS = parser.parse_args()
         self.viz = Visdom(port=FLAGS.port, server=FLAGS.server)
-        self.fake_point = False  # whether import the boundaries of the fire from the xml
+        self.fake_point = True  # whether import the boundaries of the fire from the xml
 
         assert self.viz.check_connection(timeout_seconds=3), 'No connection could be formed quickly, remember to run \'visdom\' in the terminal'
 
@@ -83,21 +83,22 @@ class SampleHazardDetector(IDataReceived):
             self.fake_points()
 
     def fake_points(self):
-        hazardZone_node = self.scenario.getElementsByTagName('HazardZone')
-        boundary_points = hazardZone_node[0].getElementsByTagName('Location3D')
-        for point_string in boundary_points:
-            latitude = float(point_string.getElementsByTagName('Latitude')[0].childNodes[0].nodeValue)
-            longitude = float(point_string.getElementsByTagName('Longitude')[0].childNodes[0].nodeValue)
-            location = Location3D()
-            location.set_Latitude(latitude)
-            location.set_Longitude(longitude)
-            lat, long = self.normalise_coordinates(location)
-            try:
-                self.heatmap[lat][long] = 1.0
-                self.last_detected[lat][long] = self.current_time  # the last registered time
+        hazardZone_nodes = self.scenario.getElementsByTagName('HazardZone')
+        for hazardZone_node in hazardZone_nodes:
+            boundary_points = hazardZone_node.getElementsByTagName('Location3D')
+            for point_string in boundary_points:
+                latitude = float(point_string.getElementsByTagName('Latitude')[0].childNodes[0].nodeValue)
+                longitude = float(point_string.getElementsByTagName('Longitude')[0].childNodes[0].nodeValue)
+                location = Location3D()
+                location.set_Latitude(latitude)
+                location.set_Longitude(longitude)
+                lat, long = self.normalise_coordinates(location)
+                try:
+                    self.heatmap[lat][long] = 1.0
+                    self.last_detected[lat][long] = self.current_time  # the last registered time
 
-            except Exception as ex:
-                print(ex)
+                except Exception as ex:
+                    print(ex)
         self.apply_smoothing()
         self.update_visdom()
 
