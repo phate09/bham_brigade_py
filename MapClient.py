@@ -239,6 +239,8 @@ class SampleHazardDetector(IDataReceived):
             denormalised_point = Location3D()
             lat, long = self.denormalise_coordinates(point[0], point[1])
             denormalised_point.set_Latitude(lat)
+            denormalised_point.set_Longitude(long)
+            print(denormalised_point)
             # point.set_Latitude(index.)
             self.__estimatedHazardZone.get_BoundaryPoints().append(denormalised_point)
 
