@@ -143,7 +143,7 @@ class SampleHazardDetector(IDataReceived):
     def dataReceived(self, lmcpObject):
         try:
             if isinstance(lmcpObject, SessionStatus):
-                print(f'time: {self.current_time} - session status')
+                print(f'time: {self.current_time} - session status'.ljust(100), end='\r', flush=True)
                 session_status: SessionStatus = lmcpObject
                 self.current_time = session_status.get_ScenarioTime()  # save the last registered time to use in other parts of the code
                 state: SimulationStatusType.SimulationStatusType = session_status.get_State()
@@ -206,7 +206,7 @@ class SampleHazardDetector(IDataReceived):
                 #
                 pass
             if isinstance(lmcpObject, HazardZoneDetection):
-                print(f'time: {self.current_time} - hazardzone detection')
+                print(f'time: {self.current_time} - hazardzone detection'.ljust(100), end='\r', flush=True)
                 hazardDetected: HazardZoneDetection = lmcpObject
                 # Get location where zone first detected
                 new_point = False
@@ -277,10 +277,10 @@ class SampleHazardDetector(IDataReceived):
 
     def compute_and_send_estimate_hazardZone(self, force=False):
         delta_time = self.current_time - self.last_refresh
-        if (len(self.force_recompute_times)>0 and self.current_time>self.force_recompute_times[0]*1000):
+        if (len(self.force_recompute_times)>0 and self.current_time>(self.force_recompute_times[0]-10)*1000): #10 seconds before each scoring
             self.force_recompute_times.pop(0)#remove first time
             force = True #force recomputing
-        if (force or delta_time > REFRESH_RATE and self.new_points_detected):
+        if (force or (delta_time > REFRESH_RATE and self.new_points_detected)):
             self.last_refresh = self.current_time
             self.new_points_detected = False
             coords = self.compute_coords()

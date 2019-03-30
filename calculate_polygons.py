@@ -126,7 +126,7 @@ def calculate_polygons(coords):
     # print("alpha")
     # polygons_list = calculate_alpha_shape_polygons(coords)
 
-    print("kmeans")
+    print("\nkmeans")
     start = time.time()
     polygons_list = calculate_k_means_polygons(coords)
     end = time.time()
