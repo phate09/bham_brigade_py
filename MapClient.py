@@ -35,6 +35,7 @@ CONTOUR = "contour"
 # VIZ_SCATTER = "viz_scatter"
 
 HEATMAP = "heatmap"
+REFRESH_RATE = 10000
 
 
 class PrintLMCPObject(IDataReceived):
@@ -56,6 +57,8 @@ class SampleHazardDetector(IDataReceived):
         FLAGS = parser.parse_args()
         self.viz = Visdom(port=FLAGS.port, server=FLAGS.server)
         self.fake_point = False  # whether import the boundaries of the fire from the xml
+        self.last_refresh = 0
+        self.new_points_detected = False
 
         assert self.viz.check_connection(timeout_seconds=3), 'No connection could be formed quickly, remember to run \'visdom\' in the terminal'
 
@@ -67,10 +70,12 @@ class SampleHazardDetector(IDataReceived):
         self.last_detected = np.zeros((100, 100))  # the time at which the fire was last detected (or not) in that cell
         self.smooth = np.zeros((100, 100))
         self.drones_status = {}
+        self.current_time =0
         self.communication_channel = protobuf.communication_client.CommunicationChannel()
         self.belief_model = BeliefModel()
 
     def load_scenario(self, filename):
+        print("loading scenario")
         self.scenario = minidom.parse(filename)
         simulation_view_node = self.scenario.getElementsByTagName('SimulationView')
         self.latitude = float(simulation_view_node[0].attributes['Latitude'].value)
@@ -80,8 +85,10 @@ class SampleHazardDetector(IDataReceived):
         self.min_lat = self.latitude - self.long_extent
         self.max_long = self.longitude + self.long_extent
         self.min_long = self.longitude - self.long_extent
+        self.last_refresh = 0
+        self.new_points_detected = False
         keep_in_zone = self.scenario.getElementsByTagName('KeepInZone')
-        if len(keep_in_zone) > 0: #if there is a keep in zone then constraint to that
+        if len(keep_in_zone) > 0:  # if there is a keep in zone then constraint to that
             self.latitude = float(keep_in_zone[0].getElementsByTagName('Latitude')[0].childNodes[0].nodeValue)
             self.longitude = float(keep_in_zone[0].getElementsByTagName('Longitude')[0].childNodes[0].nodeValue)
             width = float(keep_in_zone[0].getElementsByTagName('Width')[0].childNodes[0].nodeValue)
@@ -89,15 +96,16 @@ class SampleHazardDetector(IDataReceived):
             centerPoint = Location3D()
             centerPoint.set_Latitude(self.latitude)
             centerPoint.set_Longitude(self.longitude)
-            low_loc:Location3D = self.newLocation(centerPoint, height / -2, width / -2)
-            high_loc:Location3D = self.newLocation(centerPoint, height / 2, width / 2)
-            self.max_lat= max(low_loc.get_Latitude(),high_loc.get_Latitude())
-            self.max_long= max(low_loc.get_Longitude(),high_loc.get_Longitude())
-            self.min_lat= min(low_loc.get_Latitude(),high_loc.get_Latitude())
-            self.min_long= min(low_loc.get_Longitude(),high_loc.get_Longitude())
+            low_loc: Location3D = self.newLocation(centerPoint, height / -2, width / -2)
+            high_loc: Location3D = self.newLocation(centerPoint, height / 2, width / 2)
+            self.max_lat = max(low_loc.get_Latitude(), high_loc.get_Latitude())
+            self.max_long = max(low_loc.get_Longitude(), high_loc.get_Longitude())
+            self.min_lat = min(low_loc.get_Latitude(), high_loc.get_Latitude())
+            self.min_long = min(low_loc.get_Longitude(), high_loc.get_Longitude())
 
         if self.fake_point:
             self.fake_points()
+        print('scenario loaded')
 
     def newLocation(self, loc: Location3D, dx, dy):
         R_EARTHKM = 6372.8
@@ -135,6 +143,7 @@ class SampleHazardDetector(IDataReceived):
     def dataReceived(self, lmcpObject):
         try:
             if isinstance(lmcpObject, SessionStatus):
+                print(f'time: {self.current_time} - session status')
                 session_status: SessionStatus = lmcpObject
                 self.current_time = session_status.get_ScenarioTime()  # save the last registered time to use in other parts of the code
                 state: SimulationStatusType.SimulationStatusType = session_status.get_State()
@@ -159,7 +168,6 @@ class SampleHazardDetector(IDataReceived):
                         self.load_scenario(self.filename)
                 if self.filename is None:  # only move on when the scenario is ready
                     return
-                delta_time = session_status.ScenarioTime - self.current_time
                 self.current_time = session_status.ScenarioTime
                 # self.heatmap = self.update_heatmap(delta_time)
                 self.communication_channel.send(self.current_time, self.heatmap, self.max_lat, self.max_long, self.min_lat, self.min_long)
@@ -197,6 +205,7 @@ class SampleHazardDetector(IDataReceived):
                 #
                 pass
             if isinstance(lmcpObject, HazardZoneDetection):
+                print(f'time: {self.current_time} - hazardzone detection')
                 hazardDetected: HazardZoneDetection = lmcpObject
                 # Get location where zone first detected
                 detectedLocation = hazardDetected.get_DetectedLocation()
@@ -206,6 +215,7 @@ class SampleHazardDetector(IDataReceived):
                     self.heatmap[lat][long] = 1.0
                     self.last_detected[lat][long] = self.current_time  # the last registered time
                     self.apply_smoothing()
+                    self.new_points_detected = True
 
                 except Exception as ex:
                     print(ex)
@@ -256,31 +266,35 @@ class SampleHazardDetector(IDataReceived):
             lat, long = self.denormalise_coordinates(point[0], point[1])
             denormalised_point.set_Latitude(lat)
             denormalised_point.set_Longitude(long)
-            print(denormalised_point)
+            # print(denormalised_point)
             # point.set_Latitude(index.)
             self.__estimatedHazardZone.get_BoundaryPoints().append(denormalised_point)
 
     def compute_and_send_estimate_hazardZone(self):
-        coords = self.compute_coords()
+        delta_time = self.current_time - self.last_refresh
+        if (delta_time > REFRESH_RATE and self.new_points_detected):
+            self.last_refresh = self.current_time
+            self.new_points_detected = False
+            coords = self.compute_coords()
 
-        # Simple triangle
-        if len(coords) < 3:
-            return
+            # Simple triangle
+            if len(coords) < 3:
+                return
 
-        try:
-            # Different options to create polygon.
-            norm_polys = calculate_polygons.calculate_polygons(coords)
-            # norm_poly = ConvexHull(coords)
-            # For now just get first polygon.
-            for index, poly in enumerate(norm_polys):
-                # norm_poly = norm_polys[0]
-                self.belief_model.polygons.append(poly)
+            try:
+                # Different options to create polygon.
+                norm_polys = calculate_polygons.calculate_polygons(coords)
+                # norm_poly = ConvexHull(coords)
+                # For now just get first polygon.
+                for index, poly in enumerate(norm_polys):
+                    # norm_poly = norm_polys[0]
+                    self.belief_model.polygons.append(poly)
 
-                self.set_coord_as_hazard_zone(poly)
-                self.sendEstimateReport(index)
-        except Exception as ex:
-            raise ex
-            # print(ex)
+                    self.set_coord_as_hazard_zone(poly)
+                    self.sendEstimateReport(index)
+            except Exception as ex:
+                raise ex
+                # print(ex)
 
     def sendEstimateReport(self, id=1):
         # Setting up the mission to send to the UAV

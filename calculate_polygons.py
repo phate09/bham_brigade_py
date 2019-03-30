@@ -13,6 +13,7 @@ import numpy as np
 from shapely.ops import cascaded_union, polygonize
 import shapely.geometry as geometry
 
+
 class FHPolygon():
     # Array of 2D points
     def __init__(self):
@@ -25,7 +26,7 @@ def calculate_convex_hull_polygon(coords):
         fhpolygon.points = coords
         return [fhpolygon]
 
-    convexHull = ConvexHull(coords)
+    convexHull = ConvexHull(coords, qhull_options='QbB')
 
     fhpolygon = FHPolygon()
 
@@ -40,15 +41,12 @@ def calculate_alpha_shape_polygons(coords):
     multi_polygon = alpha_shape(coords)
 
     print("Multi Polygon")
-
-    print(multi_polygon)
     polygons = list(multi_polygon)
 
     polygons_list = []
 
     for polygon in polygons:
         fhpolygon = FHPolygon()
-        print(polygon.exterior)
         fhpolygon.points = polygon.exterior.coords
 
         polygons_list.append(fhpolygon)
@@ -80,7 +78,8 @@ def k_means_clustering(coords, n_clusters):
 
 def pick_k(coords):
     scores = []
-    for k in range(1, 5):
+    max_k = min(5, len(coords) - 1)
+    for k in range(1, max_k):
         points, labels = k_means_clustering(coords, k)
         if k == 1:
             score = 0.5
@@ -93,19 +92,28 @@ def pick_k(coords):
 
 def calculate_k_means_polygons(coords):
     k = pick_k(coords)  # run the method to choose k
-    points, labels = k_means_clustering(coords, k)  # performs k means
-    clusters = [[] for i in range(k)]  # generate list of lists
-    for point, label in zip(points, labels):  # assign every point to it's coordinate
-        clusters[label].append(point)
+    repeat = True
+    while (repeat):
+        try:
+            points, labels = k_means_clustering(coords, k)  # performs k means
+            clusters = [[] for i in range(k)]  # generate list of lists
+            for point, label in zip(points, labels):  # assign every point to it's coordinate
+                clusters[label].append(point)
 
-    # clusters = cluster_points(coords, k)
+            # clusters = cluster_points(coords, k)
 
-    polygon_list = []
+            polygon_list = []
 
-    for cluster in clusters:
-        polygon_list += calculate_convex_hull_polygon(cluster)
+            for cluster in clusters:
+                polygon_list += calculate_convex_hull_polygon(cluster)
+            repeat = True
+            return polygon_list
+        except Exception as ex:
+            print(ex)
+            print(f"error with k={k},trying with k--")
+            k = k - 1
 
-    return polygon_list
+    # return polygon_list
 
 
 def calculate_polygons(coords):
@@ -173,7 +181,7 @@ def alpha_shape(points, alpha=0.1):
     # loop over triangles:
     # ia, ib, ic = indices of corner points of the
     # triangle
-    print(tri)
+    # print(tri)
     for ia, ib, ic in tri.vertices:
         pa = coords[ia]
         pb = coords[ib]

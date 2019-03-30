@@ -15,15 +15,18 @@ from lmcp import LMCPObject
 import abc
 import threading
 
+
 class IDataReceived(abc.ABC):
     @abc.abstractmethod
     def dataReceived(self, lmcpObject):
         pass
 
+
 class AmaseTCPClient(threading.Thread):
     def __init__(self, host, port):
         super().__init__()
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.__socket.settimeout(None)
         self.__stop_reading = False
         self.__factory = LMCPFactory.LMCPFactory()
         self.__recvCallbacks = []
@@ -33,7 +36,7 @@ class AmaseTCPClient(threading.Thread):
     def connect(self):
         while True and not self.__stop_reading:
             try:
-                self.__socket.settimeout(5)
+                # self.__socket.settimeout(5)
                 self.__socket.connect((self.__host, self.__port))
                 return True
             except Exception as ex:
@@ -48,7 +51,7 @@ class AmaseTCPClient(threading.Thread):
             raise ValueError("Not an LMCP Object.  Non-LMCP message to AMASE not supported")
 
     def addReceiveCallback(self, iDataRcv):
-        if(isinstance(iDataRcv, IDataReceived)):
+        if (isinstance(iDataRcv, IDataReceived)):
             self.__recvCallbacks.append(iDataRcv)
         else:
             raise TypeError("Receive callback is not an instance of IDataReceived")
@@ -57,7 +60,7 @@ class AmaseTCPClient(threading.Thread):
         self.__stop_reading = True
 
     def run(self):
-        if(self.connect()):
+        if (self.connect()):
             while (not self.__stop_reading):
                 try:
                     lmcpObj = self.__readLMCPDataFromSocket()
@@ -76,15 +79,14 @@ class AmaseTCPClient(threading.Thread):
 
     def __readLMCPDataFromSocket(self):
         data = bytearray(self.__socket.recv(LMCPFactory.HEADER_SIZE))
-        if(len(data) >= LMCPFactory.HEADER_SIZE):
+        if (len(data) >= LMCPFactory.HEADER_SIZE):
             size = LMCPFactory.getSize(data)
-            data.extend(bytearray(self.__socket.recv(size+4))) # compensate for checksum
+            data.extend(bytearray(self.__socket.recv(size + 4)))  # compensate for checksum
             recv_obj = self.__factory.getObject(data)
             if recv_obj != None:
                 return recv_obj
             else:
                 raise ValueError("Invalid object received.")
-        if(len(data) == 0):
+        if (len(data) == 0):
             return
         raise ValueError("Data read not enough for an LMCP header")
-
