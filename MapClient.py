@@ -31,7 +31,7 @@ import calculate_polygons
 
 CONTOUR = "contour"
 
-VIZ_SCATTER = "viz_scatter"
+# VIZ_SCATTER = "viz_scatter"
 
 HEATMAP = "heatmap"
 
@@ -54,7 +54,7 @@ class SampleHazardDetector(IDataReceived):
                             help='Server address of the target to run the demo on.')
         FLAGS = parser.parse_args()
         self.viz = Visdom(port=FLAGS.port, server=FLAGS.server)
-        self.fake_point = False  # wether import the boundaries of the fire from the xml
+        self.fake_point = True  # wether import the boundaries of the fire from the xml
 
         assert self.viz.check_connection(timeout_seconds=3), 'No connection could be formed quickly, remember to run \'visdom\' in the terminal'
 
@@ -80,10 +80,9 @@ class SampleHazardDetector(IDataReceived):
         self.max_long = self.longitude + self.long_extent
         self.min_long = self.longitude - self.long_extent
         if self.fake_point:
-            self.fake_points(filename)
+            self.fake_points()
 
-    def fake_points(self, filename):
-        self.scenario = minidom.parse(filename)
+    def fake_points(self):
         hazardZone_node = self.scenario.getElementsByTagName('HazardZone')
         boundary_points = hazardZone_node[0].getElementsByTagName('Location3D')
         for point_string in boundary_points:
@@ -110,9 +109,11 @@ class SampleHazardDetector(IDataReceived):
                 state: SimulationStatusType.SimulationStatusType = session_status.get_State()
                 if state is SimulationStatusType.SimulationStatusType.Reset:
                     self.viz.close(win=HEATMAP)
-                    self.viz.close(win=VIZ_SCATTER)
+                    # self.viz.close(win=VIZ_SCATTER)
                     self.viz.close(win=CONTOUR)
                     self.viz.close(win="Trajectory")
+                    self.scenario = None
+                    self.filename = None  # scenario not ready
                     self.heatmap = np.zeros((100, 100))
                     self.last_detected = np.zeros((100, 100))  # the time at which the fire was last detected (or not) in that cell
                     self.smooth = np.zeros((100, 100))
@@ -131,7 +132,7 @@ class SampleHazardDetector(IDataReceived):
                 self.current_time = session_status.ScenarioTime
                 # self.heatmap = self.update_heatmap(delta_time)
                 self.communication_channel.send(self.current_time, self.heatmap, self.max_lat, self.max_long, self.min_lat, self.min_long)
-                self.compute_and_send_estimate()
+                self.compute_and_send_estimate_hazardZone()
             if isinstance(lmcpObject, AirVehicleState):
                 # vehicleState: AirVehicleState = lmcpObject
                 # id = vehicleState.ID
@@ -179,20 +180,6 @@ class SampleHazardDetector(IDataReceived):
                     print(ex)
                 # self.viz.contour(X=self.heatmap, win=self.contour, opts=dict(title='Contour plot'))
                 self.update_visdom()
-            if isinstance(lmcpObject, HazardZone):
-                '''here it fake the points for debugging purporses taking them from the hazardzone message'''
-                hazardZone: HazardZone = lmcpObject
-                polygon: Polygon = hazardZone.get_Boundary()
-                points = polygon.get_BoundaryPoints()
-                for detectedLocation in points:
-                    lat, long = self.normalise_coordinates(detectedLocation)
-                    try:
-                        self.heatmap[lat][long] = 1.0
-                        self.last_detected[lat][long] = self.current_time  # the last registered time
-                        self.apply_smoothing()
-
-                    except Exception as ex:
-                        print(ex)
 
         except Exception as ex:
             print(ex)
@@ -220,8 +207,6 @@ class SampleHazardDetector(IDataReceived):
         Updates the heatmap and returns a new heatmap
         """
 
-
-
     '''gets the points in the heatmap where there is fire'''
 
     def compute_coords(self):
@@ -244,8 +229,7 @@ class SampleHazardDetector(IDataReceived):
             # point.set_Latitude(index.)
             self.__estimatedHazardZone.get_BoundaryPoints().append(denormalised_point)
 
-
-    def compute_and_send_estimate(self):
+    def compute_and_send_estimate_hazardZone(self):
         coords = self.compute_coords()
 
         # Simple triangle
@@ -255,45 +239,19 @@ class SampleHazardDetector(IDataReceived):
         try:
             # Different options to create polygon.
             norm_polys = calculate_polygons.calculate_polygons(coords)
-            #norm_poly = ConvexHull(coords)
+            # norm_poly = ConvexHull(coords)
             # For now just get first polygon.
-            for index,poly in enumerate(norm_polys):
-            # norm_poly = norm_polys[0]
+            for index, poly in enumerate(norm_polys):
+                # norm_poly = norm_polys[0]
                 self.belief_model.polygons.append(poly)
 
                 self.set_coord_as_hazard_zone(poly)
                 self.sendEstimateReport(index)
         except Exception as ex:
             raise ex
-            #print(ex)
+            # print(ex)
 
-    def sendLoiterCommand(self, vehicleId, location):
-        # Setting up the mission to send to the UAV
-        vehicleActionCommand = VehicleActionCommand()
-        vehicleActionCommand.set_VehicleID(vehicleId)
-        vehicleActionCommand.set_Status(CommandStatusType.Pending)
-        vehicleActionCommand.set_CommandID(1)
-
-        # Setting up the loiter action
-        loiterAction = LoiterAction()
-        loiterAction.set_LoiterType(LoiterType.Circular)
-        loiterAction.set_Radius(250)
-        loiterAction.set_Axis(0)
-        loiterAction.set_Length(0)
-        loiterAction.set_Direction(LoiterDirection.Clockwise)
-        loiterAction.set_Duration(100000)
-        loiterAction.set_Airspeed(15)
-
-        # Creating a 3D location object for the stare point
-        loiterAction.set_Location(location)
-
-        # Adding the loiter action to the vehicle action list
-        vehicleActionCommand.get_VehicleActionList().append(loiterAction)
-
-        # Sending the Vehicle Action Command message to AMASE to be interpreted
-        self.__client.sendLMCPObject(vehicleActionCommand)
-
-    def sendEstimateReport(self,id=1):
+    def sendEstimateReport(self, id=1):
         # Setting up the mission to send to the UAV
         hazardZoneEstimateReport = HazardZoneEstimateReport()
         hazardZoneEstimateReport.set_EstimatedZoneShape(self.__estimatedHazardZone)
@@ -305,8 +263,6 @@ class SampleHazardDetector(IDataReceived):
 
         # Sending the Vehicle Action Command message to AMASE to be interpreted
         self.__client.sendLMCPObject(hazardZoneEstimateReport)
-
-
 
 
 #################

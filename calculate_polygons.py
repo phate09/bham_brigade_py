@@ -13,11 +13,11 @@ import numpy as np
 from shapely.ops import cascaded_union, polygonize
 import shapely.geometry as geometry
 
+
 class FHPolygon():
     # Array of 2D points
     def __init__(self):
         self.points = []
-
 
 
 def calculate_convex_hull_polygon(coords):
@@ -30,6 +30,7 @@ def calculate_convex_hull_polygon(coords):
 
     # This is always a single polygon but want to return an array.
     return [fhpolygon]
+
 
 def calculate_alpha_shape_polygons(coords):
     multi_polygon = alpha_shape(coords)
@@ -57,7 +58,7 @@ def cluster_points(coords, n_clusters):
     k_means_cluster_centers = np.sort(k_means.cluster_centers_, axis=0)
     k_means_labels = sklearn.metrics.pairwise_distances_argmin(coords, k_means_cluster_centers)
 
-    clusters = [ [] for i in range(n_clusters)]
+    clusters = [[] for i in range(n_clusters)]
 
     for point, label in zip(coords, k_means_labels):
         clusters[label] += point
@@ -66,10 +67,35 @@ def cluster_points(coords, n_clusters):
     return clusters
 
 
-def calculate_k_means_polygons(coords):
-    n_clusters=2
+def k_means_clustering(coords, n_clusters):
+    k_means = sklearn.cluster.KMeans(init='k-means++', n_clusters=n_clusters, n_init=10)
+    k_means.fit(coords)
+    k_means_cluster_centers = np.sort(k_means.cluster_centers_, axis=0)
+    k_means_labels = sklearn.metrics.pairwise_distances_argmin(coords, k_means_cluster_centers)
+    return coords, k_means_labels
 
-    clusters = cluster_points(coords, n_clusters)
+
+def pick_k(coords):
+    scores = []
+    for k in range(1, 5):
+        points, labels = k_means_clustering(coords, k)
+        if k == 1:
+            score = 0.5
+        else:
+            score = sklearn.metrics.silhouette_score(points, labels)
+        scores.append(score)
+    chosen_k = 1 + np.argmax(scores)
+    return chosen_k
+
+
+def calculate_k_means_polygons(coords):
+    k = pick_k(coords)  # run the method to choose k
+    points, labels = k_means_clustering(coords, k)  # performs k means
+    clusters = [[] for i in range(k)]  # generate list of lists
+    for point, label in zip(points, labels):  # assign every point to it's coordinate
+        clusters[label] += point
+
+    # clusters = cluster_points(coords, k)
 
     polygon_list = []
 
@@ -77,18 +103,17 @@ def calculate_k_means_polygons(coords):
         polygon_list += calculate_convex_hull_polygon(cluster)
 
 
-
 def calculate_polygons(coords):
     # Choice of methods to compute polygon.
 
-    #print("convex hull")
-    #polygons_list = calculate_convex_hull_polygon(coords)
+    # print("convex hull")
+    # polygons_list = calculate_convex_hull_polygon(coords)
     #
     # print("alpha")
     # polygons_list = calculate_alpha_shape_polygons(coords)
 
     print("kmeans")
-    polygon_list = calculate_k_means_polygons(coords)
+    polygons_list = calculate_k_means_polygons(coords)
 
     # print(polygons_list_1)
     # print(polygons_list)
@@ -96,8 +121,15 @@ def calculate_polygons(coords):
     return polygons_list
 
 
-
-
+def calculate_silhouette_coefficient(clusters):
+    '''calculates the average standard deviation of each cluster, the lower the better'''
+    stds = []
+    for cluster_index in range(clusters):
+        cluster = clusters[cluster_index]
+        mean = np.mean(cluster)
+        std = np.std(cluster)
+        stds.append(std)
+    return np.mean(stds)
 
 
 # From https://tereshenkov.wordpress.com/2017/11/28/building-concave-hulls-alpha-shapes-with-pyqt-shapely-and-arcpy/
@@ -111,6 +143,7 @@ def add_edge(edges, edge_points, coords, i, j):
         return
     edges.add((i, j))
     edge_points.append(coords[[i, j]])
+
 
 def alpha_shape(points, alpha=0.1):
     """
@@ -127,9 +160,6 @@ def alpha_shape(points, alpha=0.1):
         # in computing an alpha shape.
         return geometry.MultiPoint(list(points)).convex_hull
 
-
-
-
     coords = np.array([point for point in points])
     tri = Delaunay(coords)
     edges = set()
@@ -145,9 +175,9 @@ def alpha_shape(points, alpha=0.1):
         pc = coords[ic]
 
         # Lengths of sides of triangle
-        a = math.sqrt((pa[0] - pb[0])**2 + (pa[1] - pb[1])**2)
-        b = math.sqrt((pb[0] - pc[0])**2 + (pb[1] - pc[1])**2)
-        c = math.sqrt((pc[0] - pa[0])**2 + (pc[1] - pa[1])**2)
+        a = math.sqrt((pa[0] - pb[0]) ** 2 + (pa[1] - pb[1]) ** 2)
+        b = math.sqrt((pb[0] - pc[0]) ** 2 + (pb[1] - pc[1]) ** 2)
+        c = math.sqrt((pc[0] - pa[0]) ** 2 + (pc[1] - pa[1]) ** 2)
 
         # Semiperimeter of triangle
         s = (a + b + c) / 2.0
@@ -157,7 +187,7 @@ def alpha_shape(points, alpha=0.1):
         circum_r = a * b * c / (4.0 * area)
 
         # Here's the radius filter.
-        #print(circum_r, 1.0 / alpha)
+        # print(circum_r, 1.0 / alpha)
         if circum_r < 1.0 / alpha:
             add_edge(edges, edge_points, coords, ia, ib)
             add_edge(edges, edge_points, coords, ib, ic)
@@ -166,4 +196,4 @@ def alpha_shape(points, alpha=0.1):
     m = geometry.MultiLineString(edge_points)
     triangles = list(polygonize(m))
 
-    return list(cascaded_union(triangles))#, edge_points
+    return list(cascaded_union(triangles))  # , edge_points
