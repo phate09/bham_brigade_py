@@ -45,23 +45,23 @@ def calculate_alpha_shape_polygons(coords):
 
         polygons_list.append(fhpolygon)
 
-    return polygon_list
+    return polygons_list
 
 
 
 def calculate_polygons(coords):
     # Choice of methods to compute polygon.
 
-    print("convex hull")
-    polygons_list_1 = calculate_convex_hull_polygon(coords)
+    # print("convex hull")
+    # polygons_list_1 = calculate_convex_hull_polygon(coords)
 
-    #print("alpha")
-    #polygon_list = calculate_alpha_shape_polygons(coords)
+    print("alpha")
+    polygons_list = calculate_alpha_shape_polygons(coords)
 
-    print(polygons_list_1)
-    #print(polygons_list)
+    # print(polygons_list_1)
+    print(polygons_list)
 
-    return polygons_list_1
+    return polygons_list
 
 
 
@@ -80,7 +80,7 @@ def add_edge(edges, edge_points, coords, i, j):
     edges.add((i, j))
     edge_points.append(coords[[i, j]])
 
-def alpha_shape(points, alpha=2):
+def alpha_shape(points, alpha=1):
     """
     Compute the alpha shape (concave hull) of a set
     of points.
@@ -98,7 +98,7 @@ def alpha_shape(points, alpha=2):
 
 
 
-    coords = np.array([point.coords[0] for point in points])
+    coords = np.array([point for point in points])
     tri = Delaunay(coords)
     edges = set()
     edge_points = []
@@ -120,18 +120,18 @@ def alpha_shape(points, alpha=2):
         # Semiperimeter of triangle
         s = (a + b + c) / 2.0
 
-    # Area of triangle by Heron's formula
-    area = math.sqrt(s * (s - a) * (s - b) * (s - c))
-    circum_r = a * b * c / (4.0 * area)
+        # Area of triangle by Heron's formula
+        area = math.sqrt(s * (s - a) * (s - b) * (s - c))
+        circum_r = a * b * c / (4.0 * area)
 
-    # Here's the radius filter.
-    #print(circum_r, 1.0 / alpha)
-    if circum_r < 1.0 / alpha:
-        add_edge(edges, edge_points, coords, ia, ib)
-        add_edge(edges, edge_points, coords, ib, ic)
-        add_edge(edges, edge_points, coords, ic, ia)
+        # Here's the radius filter.
+        #print(circum_r, 1.0 / alpha)
+        if circum_r < 1.0 / alpha:
+            add_edge(edges, edge_points, coords, ia, ib)
+            add_edge(edges, edge_points, coords, ib, ic)
+            add_edge(edges, edge_points, coords, ic, ia)
 
     m = geometry.MultiLineString(edge_points)
     triangles = list(polygonize(m))
 
-    return cascaded_union(triangles), edge_points
+    return list(cascaded_union(triangles))#, edge_points
