@@ -5,6 +5,9 @@ import numpy as np
 from scipy.spatial import Delaunay
 from scipy.spatial import ConvexHull
 
+import sklearn.cluster
+import sklearn.metrics
+
 import numpy as np
 
 from shapely.ops import cascaded_union, polygonize
@@ -48,15 +51,44 @@ def calculate_alpha_shape_polygons(coords):
     return polygons_list
 
 
+def cluster_points(coords, n_clusters):
+    k_means = sklearn.cluster.KMeans(init='k-means++', n_clusters=n_clusters, n_init=10)
+    k_means.fit(coords)
+    k_means_cluster_centers = np.sort(k_means.cluster_centers_, axis=0)
+    k_means_labels = sklearn.metrics.pairwise_distances_argmin(coords, k_means_cluster_centers)
+
+    clusters = [ [] for i in range(n_clusters)]
+
+    for point, label in zip(coords, k_means_labels):
+        clusters[label] += point
+
+    print("Clusters Done")
+    return clusters
+
+
+def calculate_k_means_polygons(coords):
+    n_clusters=2
+
+    clusters = cluster_points(coords, n_clusters)
+
+    polygon_list = []
+
+    for cluster in clusters:
+        polygon_list += calculate_convex_hull_polygon(cluster)
+
+
 
 def calculate_polygons(coords):
     # Choice of methods to compute polygon.
 
-    print("convex hull")
-    polygons_list = calculate_convex_hull_polygon(coords)
+    #print("convex hull")
+    #polygons_list = calculate_convex_hull_polygon(coords)
     #
     # print("alpha")
     # polygons_list = calculate_alpha_shape_polygons(coords)
+
+    print("kmeans")
+    polygon_list = calculate_k_means_polygons(coords)
 
     # print(polygons_list_1)
     # print(polygons_list)
