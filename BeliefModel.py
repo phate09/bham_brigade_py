@@ -46,20 +46,16 @@ class BeliefModel:
         mean = np.mean(scores)
         return (mean, std)
 
-    def update_beliefs(self, point):
-        '''updates all the beliefs based on the new point'''
-        if self.attention_window_index < self.attention_window_size:
-            self.attention_window.append(point)
-        else:
-            self.attention_window.insert(self.attention_window_index, point)  # replace old points
-        self.attention_window_index = (self.attention_window_index + 1) % self.attention_window_size
-
+    def update_beliefs(self, heatmap,last_detected):
+        '''updates all the beliefs based on the new population, the population is inferred from the heatmap and last detected array'''
+        self.attention_window = self.get_points_population(heatmap,last_detected)
         self.growth_mean, self.growth_std = self.aggregate(self.score_growth)
         self.translation_mean, self.translation_std = self.aggregate(self.score_translation)
         self.angle_mean, self.angle_std = self.aggregate(self.score_angle)
         pass
 
     def distance_from_hull(self, hull, p):
+        '''given a polygon and a point finds the distance from the polygon'''
         dists = []
         points = hull.points
         for i in range(len(points) - 1):
@@ -67,6 +63,18 @@ class BeliefModel:
         index = np.argmin(dists)[0]
         dist = dists[index]
         return dist, points[index]
+
+    def get_points_population(self, heatmap, last_detected):
+        coords = []
+        last_seen_list = []
+        for row in range(heatmap.shape[0]):
+            for col in range(heatmap.shape[1]):
+                if heatmap[row][col] > 0.95:  # This could be a 1 check but we are pre-empting expanding this for decay.
+                    coords.append((row, col))
+                    last_seen_list.append(last_detected[row][col])
+        sorted_coords = [x for _, x in sorted(zip(last_seen_list, coords))] #sort the coordinates according to last seen
+        population = sorted_coords[-self.attention_window_size:] #gets the last elements
+        return population
 
     def dist(self, x1, y1, x2, y2, x3, y3):  # x3,y3 is the point
         px = x2 - x1

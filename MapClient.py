@@ -1,3 +1,4 @@
+from BeliefModel import BeliefModel
 from afrl.cmasi.AirVehicleState import AirVehicleState
 from afrl.cmasi.KeyValuePair import KeyValuePair
 from afrl.cmasi.SessionStatus import SessionStatus, SimulationStatusType
@@ -62,6 +63,7 @@ class SampleHazardDetector(IDataReceived):
         self.smooth = np.zeros((100, 100))
         self.drones_status = {}
         self.communication_channel = protobuf.communication_client.CommunicationChannel()
+        self.belief_model = BeliefModel()
 
     def load_scenario(self, filename):
         self.scenario = minidom.parse(filename)
@@ -86,7 +88,10 @@ class SampleHazardDetector(IDataReceived):
                     self.viz.close(win=CONTOUR)
                     self.viz.close(win="Trajectory")
                     self.heatmap = np.zeros((100, 100))
+                    self.last_detected = np.zeros((100, 100))  # the time at which the fire was last detected (or not) in that cell
+                    self.smooth = np.zeros((100, 100))
                     self.drones_status = {}
+                    self.belief_model = BeliefModel()
                     if len(session_status.get_Parameters()) > 0:
                         param: KeyValuePair
                         for param in session_status.get_Parameters():
@@ -197,6 +202,7 @@ class SampleHazardDetector(IDataReceived):
     #     except Exception as ex:
     #         print(ex)
 
+    '''gets the points in the heatmap where there is fire'''
     def compute_coords(self):
         coords = []
         for row in range(self.heatmap.shape[0]):
@@ -226,7 +232,7 @@ class SampleHazardDetector(IDataReceived):
         try:
             # Different options to create polygon.
             norm_poly = ConvexHull(coords)
-
+            self.belief_model.polygons.append(norm_poly)
 
             self.set_coord_as_hazard_zone(norm_poly)
             self.sendEstimateReport()
