@@ -21,6 +21,11 @@ class FHPolygon():
 
 
 def calculate_convex_hull_polygon(coords):
+    if len(coords) < 4:
+        fhpolygon = FHPolygon()
+        fhpolygon.points = coords
+        return [fhpolygon]
+
     convexHull = ConvexHull(coords)
 
     fhpolygon = FHPolygon()
@@ -60,9 +65,8 @@ def cluster_points(coords, n_clusters):
     clusters = [ [] for i in range(n_clusters)]
 
     for point, label in zip(coords, k_means_labels):
-        clusters[label] += point
+        clusters[label].append(point)
 
-    print("Clusters Done")
     return clusters
 
 
@@ -76,7 +80,7 @@ def calculate_k_means_polygons(coords):
     for cluster in clusters:
         polygon_list += calculate_convex_hull_polygon(cluster)
 
-
+    return polygon_list
 
 def calculate_polygons(coords):
     # Choice of methods to compute polygon.
@@ -87,17 +91,11 @@ def calculate_polygons(coords):
     # print("alpha")
     # polygons_list = calculate_alpha_shape_polygons(coords)
 
-    print("kmeans")
-    polygon_list = calculate_k_means_polygons(coords)
+    polygons_list = calculate_k_means_polygons(coords)
 
-    # print(polygons_list_1)
-    # print(polygons_list)
+    print(polygons_list)
 
     return polygons_list
-
-
-
-
 
 
 # From https://tereshenkov.wordpress.com/2017/11/28/building-concave-hulls-alpha-shapes-with-pyqt-shapely-and-arcpy/
