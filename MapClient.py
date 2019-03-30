@@ -139,7 +139,6 @@ class SampleHazardDetector(IDataReceived):
                 detectedLocation = hazardDetected.get_DetectedLocation()
                 lat, long = self.normalise_coordinates(detectedLocation)
                 detecting_id = hazardDetected.DetectingEnitiyID
-                hazardDetected_flag = True
                 try:
                     self.heatmap[lat][long] = 1.0
                     self.last_detected[lat][long]=self.current_time #the last registered time
