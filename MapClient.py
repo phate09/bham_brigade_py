@@ -133,36 +133,36 @@ class SampleHazardDetector(IDataReceived):
                 self.communication_channel.send(self.current_time, self.heatmap, self.max_lat, self.max_long, self.min_lat, self.min_long)
                 self.compute_and_send_estimate()
             if isinstance(lmcpObject, AirVehicleState):
-                vehicleState: AirVehicleState = lmcpObject
-                id = vehicleState.ID
-                heading = vehicleState.Heading
-                location: Location3D = vehicleState.get_Location()
-                self.drones_status[id] = (heading, location)
-                try:
-                    locations = []
-                    y = []
-                    markers = []
-                    for key in self.drones_status:
-                        location: Location3D
-                        heading: int
-                        heading, location = self.drones_status[key]
-                        locations.append([location.get_Longitude(), location.get_Latitude()])
-                        y.append([1])
-                        heading = (360.0 - heading) % 360.0  # counterclockwise to clockwise
-                        markers.append((3, 0, heading))
-                    self.viz.scatter(X=np.array(locations), Y=np.array(y), win=VIZ_SCATTER, opts=dict(
-                        xtickmin=self.min_long,
-                        xtickmax=self.max_long,
-                        ytickmin=self.min_lat,
-                        ytickmax=self.max_lat,
-                        marker=markers,
-                        markersize=10,
-                        linestyle='None'
-                    ))
-                except BaseException as err:
-                    print('Skipped matplotlib example')
-                    print('Error message: ', err)
-
+                # vehicleState: AirVehicleState = lmcpObject
+                # id = vehicleState.ID
+                # heading = vehicleState.Heading
+                # location: Location3D = vehicleState.get_Location()
+                # self.drones_status[id] = (heading, location)
+                # try:
+                #     locations = []
+                #     y = []
+                #     markers = []
+                #     for key in self.drones_status:
+                #         location: Location3D
+                #         heading: int
+                #         heading, location = self.drones_status[key]
+                #         locations.append([location.get_Longitude(), location.get_Latitude()])
+                #         y.append([1])
+                #         heading = (360.0 - heading) % 360.0  # counterclockwise to clockwise
+                #         markers.append((3, 0, heading))
+                #     self.viz.scatter(X=np.array(locations), Y=np.array(y), win=VIZ_SCATTER, opts=dict(
+                #         xtickmin=self.min_long,
+                #         xtickmax=self.max_long,
+                #         ytickmin=self.min_lat,
+                #         ytickmax=self.max_lat,
+                #         marker=markers,
+                #         markersize=10,
+                #         linestyle='None'
+                #     ))
+                # except BaseException as err:
+                #     print('Skipped matplotlib example')
+                #     print('Error message: ', err)
+                #
                 pass
             if isinstance(lmcpObject, HazardZoneDetection):
                 hazardDetected: HazardZoneDetection = lmcpObject
