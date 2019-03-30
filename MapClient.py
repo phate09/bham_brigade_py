@@ -1,34 +1,23 @@
-from BeliefModel import BeliefModel
-from afrl.cmasi.AirVehicleState import AirVehicleState
-from afrl.cmasi.KeyValuePair import KeyValuePair
-from afrl.cmasi.SessionStatus import SessionStatus, SimulationStatusType
-from afrl.cmasi.searchai.HazardZone import HazardZone
-from amase.TCPClient import AmaseTCPClient
-from amase.TCPClient import IDataReceived
-from afrl.cmasi.searchai.HazardZoneEstimateReport import HazardZoneEstimateReport
-from afrl.cmasi.Circle import Circle
-from afrl.cmasi.Polygon import Polygon
-from afrl.cmasi.Waypoint import Waypoint
-from afrl.cmasi.VehicleActionCommand import VehicleActionCommand
-from afrl.cmasi.LoiterAction import LoiterAction
-from afrl.cmasi.LoiterType import LoiterType
-from afrl.cmasi.LoiterDirection import LoiterDirection
-from afrl.cmasi.CommandStatusType import CommandStatusType
-from afrl.cmasi.AltitudeType import AltitudeType
-from afrl.cmasi.searchai.HazardZoneDetection import HazardZoneDetection
-from afrl.cmasi.searchai.HazardType import HazardType
-from afrl.cmasi.Location3D import Location3D
-import xml.etree.ElementTree
-from xml.dom import minidom
-from visdom import Visdom
 import argparse
-import numpy as np
-import protobuf.communication_client
-from scipy.spatial import ConvexHull
-from scipy import ndimage
 import math
+from xml.dom import minidom
+
+import numpy as np
+from scipy import ndimage
+from visdom import Visdom
 
 import calculate_polygons
+import protobuf.communication_client
+from afrl.cmasi.AirVehicleState import AirVehicleState
+from afrl.cmasi.KeyValuePair import KeyValuePair
+from afrl.cmasi.Location3D import Location3D
+from afrl.cmasi.Polygon import Polygon
+from afrl.cmasi.SessionStatus import SessionStatus, SimulationStatusType
+from afrl.cmasi.searchai.HazardType import HazardType
+from afrl.cmasi.searchai.HazardZoneDetection import HazardZoneDetection
+from afrl.cmasi.searchai.HazardZoneEstimateReport import HazardZoneEstimateReport
+from amase.TCPClient import AmaseTCPClient
+from amase.TCPClient import IDataReceived
 
 CONTOUR = "contour"
 
@@ -70,9 +59,9 @@ class SampleHazardDetector(IDataReceived):
         self.last_detected = np.zeros((100, 100))  # the time at which the fire was last detected (or not) in that cell
         self.smooth = np.zeros((100, 100))
         self.drones_status = {}
-        self.current_time =0
+        self.current_time = 0
         self.communication_channel = protobuf.communication_client.CommunicationChannel()
-        self.belief_model = BeliefModel()
+        # self.belief_model = BeliefModel()
 
     def load_scenario(self, filename):
         print("loading scenario")
@@ -139,6 +128,7 @@ class SampleHazardDetector(IDataReceived):
                     print(ex)
         self.apply_smoothing()
         self.update_visdom()
+        self.compute_and_send_estimate_hazardZone(True)
 
     def dataReceived(self, lmcpObject):
         try:
@@ -158,7 +148,7 @@ class SampleHazardDetector(IDataReceived):
                     self.last_detected = np.zeros((100, 100))  # the time at which the fire was last detected (or not) in that cell
                     self.smooth = np.zeros((100, 100))
                     self.drones_status = {}
-                    self.belief_model = BeliefModel()
+                    # self.belief_model = BeliefModel()
                     if len(session_status.get_Parameters()) > 0:
                         param: KeyValuePair
                         for param in session_status.get_Parameters():
@@ -208,19 +198,23 @@ class SampleHazardDetector(IDataReceived):
                 print(f'time: {self.current_time} - hazardzone detection')
                 hazardDetected: HazardZoneDetection = lmcpObject
                 # Get location where zone first detected
+                new_point = False
                 detectedLocation = hazardDetected.get_DetectedLocation()
                 lat, long = self.normalise_coordinates(detectedLocation)
                 detecting_id = hazardDetected.DetectingEnitiyID
                 try:
-                    self.heatmap[lat][long] = 1.0
-                    self.last_detected[lat][long] = self.current_time  # the last registered time
-                    self.apply_smoothing()
-                    self.new_points_detected = True
+                    if self.heatmap[lat][long] != 1.0:
+                        self.heatmap[lat][long] = 1.0
+                        self.last_detected[lat][long] = self.current_time  # the last registered time
+                        self.apply_smoothing()
+                        self.new_points_detected = True
+                        new_point = True
 
                 except Exception as ex:
                     print(ex)
                 # self.viz.contour(X=self.heatmap, win=self.contour, opts=dict(title='Contour plot'))
-                self.update_visdom()
+                if new_point:
+                    self.update_visdom()
 
         except Exception as ex:
             print(ex)
@@ -270,9 +264,9 @@ class SampleHazardDetector(IDataReceived):
             # point.set_Latitude(index.)
             self.__estimatedHazardZone.get_BoundaryPoints().append(denormalised_point)
 
-    def compute_and_send_estimate_hazardZone(self):
+    def compute_and_send_estimate_hazardZone(self, force=False):
         delta_time = self.current_time - self.last_refresh
-        if (delta_time > REFRESH_RATE and self.new_points_detected):
+        if (force or delta_time > REFRESH_RATE and self.new_points_detected):
             self.last_refresh = self.current_time
             self.new_points_detected = False
             coords = self.compute_coords()
@@ -288,7 +282,7 @@ class SampleHazardDetector(IDataReceived):
                 # For now just get first polygon.
                 for index, poly in enumerate(norm_polys):
                     # norm_poly = norm_polys[0]
-                    self.belief_model.polygons.append(poly)
+                    # self.belief_model.polygons.append(poly)
 
                     self.set_coord_as_hazard_zone(poly)
                     self.sendEstimateReport(index)

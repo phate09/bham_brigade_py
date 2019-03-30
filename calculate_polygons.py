@@ -69,7 +69,7 @@ def cluster_points(coords, n_clusters):
 
 
 def k_means_clustering(coords, n_clusters):
-    k_means = sklearn.cluster.KMeans(init='k-means++', n_clusters=n_clusters, n_init=10)
+    k_means = sklearn.cluster.KMeans(init='k-means++', n_clusters=n_clusters, n_init=10,precompute_distances=True,max_iter=100)
     k_means.fit(coords)
     k_means_cluster_centers = np.sort(k_means.cluster_centers_, axis=0)
     k_means_labels = sklearn.metrics.pairwise_distances_argmin(coords, k_means_cluster_centers)
@@ -78,7 +78,7 @@ def k_means_clustering(coords, n_clusters):
 
 def pick_k(coords):
     scores = []
-    max_k = min(5, len(coords) - 1)
+    max_k = min(7, len(coords) - 1)
     for k in range(1, max_k):
         points, labels = k_means_clustering(coords, k)
         if k == 1:
@@ -87,6 +87,7 @@ def pick_k(coords):
             score = sklearn.metrics.silhouette_score(points, labels)
         scores.append(score)
     chosen_k = 1 + np.argmax(scores)
+    print(f'scores={scores} picking k={chosen_k}')
     return chosen_k
 
 
