@@ -3,6 +3,7 @@ import math
 from xml.dom import minidom
 
 import numpy as np
+from geopy.distance import VincentyDistance
 from scipy import ndimage
 from visdom import Visdom
 
@@ -18,15 +19,16 @@ from afrl.cmasi.searchai.HazardZoneDetection import HazardZoneDetection
 from afrl.cmasi.searchai.HazardZoneEstimateReport import HazardZoneEstimateReport
 from amase.TCPClient import AmaseTCPClient
 from amase.TCPClient import IDataReceived
+import geopy
 
 CONTOUR = "contour"
-
-# VIZ_SCATTER = "viz_scatter"
 
 HEATMAP = "heatmap"
 REFRESH_RATE = 1000000000000
 SIZE_LAT = 150
 SIZE_LONG = 150
+MIN_ELAPSED_TIME = 10000  # milliseconds before considering removing the same point if seen again but with no fire
+
 
 class PrintLMCPObject(IDataReceived):
     def dataReceived(self, lmcpObject):
@@ -46,7 +48,7 @@ class SampleHazardDetector(IDataReceived):
                             help='Server address of the target to run the demo on.')
         FLAGS = parser.parse_args()
         self.viz = Visdom(port=FLAGS.port, server=FLAGS.server)
-        self.fake_point = False  # whether import the boundaries of the fire from the xml
+        self.fake_point = True  # whether import the boundaries of the fire from the xml
         self.last_refresh = 0
         self.new_points_detected = False
 
@@ -63,7 +65,6 @@ class SampleHazardDetector(IDataReceived):
         self.current_time = 0
         self.force_recompute_times = []
         self.communication_channel = protobuf.communication_client.CommunicationChannel()
-        # self.belief_model = BeliefModel()
 
     def load_scenario(self, filename):
         print("loading scenario")
@@ -95,8 +96,8 @@ class SampleHazardDetector(IDataReceived):
             self.min_lat = min(low_loc.get_Latitude(), high_loc.get_Latitude())
             self.min_long = min(low_loc.get_Longitude(), high_loc.get_Longitude())
         ################# SCORING TIMES ######################
-        scoring_times=self.scenario.getElementsByTagName("Hack")
-        self.force_recompute_times=[]
+        scoring_times = self.scenario.getElementsByTagName("Hack")
+        self.force_recompute_times = []
         for scoring_time in scoring_times:
             time = float(scoring_time.attributes['Time'].value)
             self.force_recompute_times.append(time)
@@ -149,7 +150,6 @@ class SampleHazardDetector(IDataReceived):
                 state: SimulationStatusType.SimulationStatusType = session_status.get_State()
                 if state is SimulationStatusType.SimulationStatusType.Reset:
                     self.viz.close(win=HEATMAP)
-                    # self.viz.close(win=VIZ_SCATTER)
                     self.viz.close(win=CONTOUR)
                     self.viz.close(win="Trajectory")
                     self.scenario = None
@@ -159,7 +159,6 @@ class SampleHazardDetector(IDataReceived):
                     self.smooth = np.zeros((SIZE_LAT, SIZE_LONG))
                     self.drones_status = {}
                     self.force_recompute_times = []
-                    # self.belief_model = BeliefModel()
                     if len(session_status.get_Parameters()) > 0:
                         param: KeyValuePair
                         for param in session_status.get_Parameters():
@@ -170,40 +169,37 @@ class SampleHazardDetector(IDataReceived):
                 if self.filename is None:  # only move on when the scenario is ready
                     return
                 self.current_time = session_status.ScenarioTime
-                # self.heatmap = self.update_heatmap(delta_time)
                 self.communication_channel.send(self.current_time, self.heatmap, self.max_lat, self.max_long, self.min_lat, self.min_long)
                 self.compute_and_send_estimate_hazardZone()
             if isinstance(lmcpObject, AirVehicleState):
-                # vehicleState: AirVehicleState = lmcpObject
-                # id = vehicleState.ID
-                # heading = vehicleState.Heading
-                # location: Location3D = vehicleState.get_Location()
-                # self.drones_status[id] = (heading, location)
-                # try:
-                #     locations = []
-                #     y = []
-                #     markers = []
-                #     for key in self.drones_status:
-                #         location: Location3D
-                #         heading: int
-                #         heading, location = self.drones_status[key]
-                #         locations.append([location.get_Longitude(), location.get_Latitude()])
-                #         y.append([1])
-                #         heading = (360.0 - heading) % 360.0  # counterclockwise to clockwise
-                #         markers.append((3, 0, heading))
-                #     self.viz.scatter(X=np.array(locations), Y=np.array(y), win=VIZ_SCATTER, opts=dict(
-                #         xtickmin=self.min_long,
-                #         xtickmax=self.max_long,
-                #         ytickmin=self.min_lat,
-                #         ytickmax=self.max_lat,
-                #         marker=markers,
-                #         markersize=10,
-                #         linestyle='None'
-                #     ))
-                # except BaseException as err:
-                #     print('Skipped matplotlib example')
-                #     print('Error message: ', err)
-                #
+                print(f'time: {self.current_time} - vehicle update'.ljust(100), end='\r', flush=True)
+                vehicleState: AirVehicleState = lmcpObject
+                id = vehicleState.ID
+                heading = vehicleState.Heading
+                location: Location3D = vehicleState.get_Location()
+                origin = geopy.Point(location.get_Latitude(), location.get_Longitude())
+                destination = VincentyDistance(kilometers=0.5).destination(origin, heading)
+                targetLocation = Location3D()  # the estimate of where the drone is looking
+                targetLocation.set_Latitude(destination.latitude)
+                targetLocation.set_Longitude(destination.longitude)
+                new_point = False  # whether there has been a change
+                lat, long = self.normalise_coordinates(targetLocation)
+                if not self.is_legal(lat, long):
+                    return
+                try:
+                    if self.heatmap[lat][long] != 0.0:  # delete the point from the heatmap
+                        delta_time = self.current_time - self.last_detected[lat][long]
+                        if delta_time > MIN_ELAPSED_TIME:
+                            self.heatmap[lat][long] = 0.0
+                            self.last_detected[lat][long] = self.current_time  # the last registered time
+                            self.apply_smoothing()
+                            self.new_points_detected = True
+                            new_point = True
+
+                except Exception as ex:
+                    print(ex)
+                if new_point:
+                    self.update_visdom()
                 pass
             if isinstance(lmcpObject, HazardZoneDetection):
                 print(f'time: {self.current_time} - hazardzone detection'.ljust(100), end='\r', flush=True)
@@ -212,6 +208,8 @@ class SampleHazardDetector(IDataReceived):
                 new_point = False
                 detectedLocation = hazardDetected.get_DetectedLocation()
                 lat, long = self.normalise_coordinates(detectedLocation)
+                if not self.is_legal(lat, long):
+                    return
                 detecting_id = hazardDetected.DetectingEnitiyID
                 try:
                     if self.heatmap[lat][long] != 1.0:
@@ -223,7 +221,6 @@ class SampleHazardDetector(IDataReceived):
 
                 except Exception as ex:
                     print(ex)
-                # self.viz.contour(X=self.heatmap, win=self.contour, opts=dict(title='Contour plot'))
                 if new_point:
                     self.update_visdom()
 
@@ -233,6 +230,9 @@ class SampleHazardDetector(IDataReceived):
     def update_visdom(self):
         self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot'))
         self.viz.contour(X=self.smooth, win=CONTOUR, opts=dict(title='Contour plot'))
+
+    def is_legal(self, lat, long):
+        return lat < SIZE_LAT and long < SIZE_LONG
 
     def apply_smoothing(self):
         self.smooth = ndimage.gaussian_filter(self.heatmap, 10)
@@ -271,15 +271,13 @@ class SampleHazardDetector(IDataReceived):
             lat, long = self.denormalise_coordinates(point[0], point[1])
             denormalised_point.set_Latitude(lat)
             denormalised_point.set_Longitude(long)
-            # print(denormalised_point)
-            # point.set_Latitude(index.)
             self.__estimatedHazardZone.get_BoundaryPoints().append(denormalised_point)
 
     def compute_and_send_estimate_hazardZone(self, force=False):
         delta_time = self.current_time - self.last_refresh
-        if (len(self.force_recompute_times)>0 and self.current_time>(self.force_recompute_times[0]-10)*1000): #10 seconds before each scoring
-            self.force_recompute_times.pop(0)#remove first time
-            force = True #force recomputing
+        if (len(self.force_recompute_times) > 0 and self.current_time > (self.force_recompute_times[0] - 10) * 1000):  # 10 seconds before each scoring
+            self.force_recompute_times.pop(0)  # remove first time
+            force = True  # force recomputing
         if (force or (delta_time > REFRESH_RATE and self.new_points_detected)):
             self.last_refresh = self.current_time
             self.new_points_detected = False
