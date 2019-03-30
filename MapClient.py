@@ -59,7 +59,6 @@ class SampleHazardDetector(IDataReceived):
         # self.filename = '/home/edoardo/Development/amase-firehack/example scenarios/HazardZoneDetectionScenario.xml'
         # self.load_scenario(self.filename)
         self.filename = None
-        self.coordinates = []
         self.heatmap = np.zeros((100, 100))
         self.smooth = np.zeros((100, 100))
         self.drones_status = {}
@@ -106,7 +105,7 @@ class SampleHazardDetector(IDataReceived):
                 self.current_time = session_status.ScenarioTime
                 # self.heatmap = self.update_heatmap(delta_time)
                 self.communication_channel.send(self.current_time, self.heatmap, self.max_lat, self.max_long, self.min_lat, self.min_long)
-                self.convex_hull()
+                self.compute_and_send_estimate()
             if isinstance(lmcpObject, AirVehicleState):
                 vehicleState: AirVehicleState = lmcpObject
                 id = vehicleState.ID
@@ -185,31 +184,68 @@ class SampleHazardDetector(IDataReceived):
         Updates the heatmap and returns a new heatmap
         """
 
-    def convex_hull(self):
-        """
-        Generates the convex hull from the point cloud
-        :return:
-        """
+    # def convex_hull(self):
+    #     """
+    #     Generates the convex hull from the point cloud
+    #     :return:
+    #     """
+    #     coords = []
+    #     for row in range(self.heatmap.shape[0]):
+    #         for col in range(self.heatmap.shape[1]):
+    #             if self.heatmap[row][col] > 0.95: # This could be a 1 check but we are pre-empting expanding this for decay.
+    #                 coords.append((row, col))
+    #     if len(coords) < 3:
+    #         return
+    #     try:
+    #         poly = ConvexHull(coords)
+    #         self.__estimatedHazardZone.get_BoundaryPoints().clear()
+    #         for index in poly.vertices:
+    #             point = Location3D()
+    #             lat, long = self.denormalise_coordinates(poly.points[index][0], poly.points[index][1])
+    #             point.set_Latitude(lat)
+    #             point.set_Longitude(long)
+    #             # point.set_Latitude(index.)
+    #             self.__estimatedHazardZone.get_BoundaryPoints().append(point)
+    #         self.sendEstimateReport()
+    #     except Exception as ex:
+    #         print(ex)
+
+    def compute_coords(self):
         coords = []
         for row in range(self.heatmap.shape[0]):
             for col in range(self.heatmap.shape[1]):
-                if self.heatmap[row][col] > 0.95:
+                if self.heatmap[row][col] > 0.95: # This could be a 1 check but we are pre-empting expanding this for decay.
                     coords.append((row, col))
+
+        return coords
+
+    def set_coord_as_hazard_zone(self, norm_poly):
+        self.__estimatedHazardZone.get_BoundaryPoints().clear()
+        for index in norm_poly.vertices:
+            point = Location3D()
+            lat, long = self.denormalise_coordinates(norm_poly.points[index][0], norm_poly.points[index][1])
+            point.set_Latitude(lat)
+            point.set_Longitude(long)
+            # point.set_Latitude(index.)
+            self.__estimatedHazardZone.get_BoundaryPoints().append(point)
+
+
+    def compute_and_send_estimate(self):
+        coords = self.compute_coords()
+
         if len(coords) < 3:
             return
+
         try:
-            poly = ConvexHull(coords)
-            self.__estimatedHazardZone.get_BoundaryPoints().clear()
-            for index in poly.vertices:
-                point = Location3D()
-                lat, long = self.denormalise_coordinates(poly.points[index][0], poly.points[index][1])
-                point.set_Latitude(lat)
-                point.set_Longitude(long)
-                # point.set_Latitude(index.)
-                self.__estimatedHazardZone.get_BoundaryPoints().append(point)
+            # Different options to create polygon.
+            norm_poly = ConvexHull(coords)
+
+
+            self.set_coord_as_hazard_zone(norm_poly)
             self.sendEstimateReport()
         except Exception as ex:
             print(ex)
+
 
     def sendLoiterCommand(self, vehicleId, location):
         # Setting up the mission to send to the UAV
