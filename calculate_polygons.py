@@ -7,7 +7,7 @@ from scipy.spatial import ConvexHull
 
 import sklearn.cluster
 import sklearn.metrics
-
+import time
 import numpy as np
 
 from shapely.ops import cascaded_union, polygonize
@@ -78,7 +78,7 @@ def k_means_clustering(coords, n_clusters):
 
 def pick_k(coords):
     scores = []
-    max_k = min(7, len(coords) - 1)
+    max_k = min(6, len(coords) - 1)
     for k in range(1, max_k):
         points, labels = k_means_clustering(coords, k)
         if k == 1:
@@ -127,8 +127,10 @@ def calculate_polygons(coords):
     # polygons_list = calculate_alpha_shape_polygons(coords)
 
     print("kmeans")
+    start = time.time()
     polygons_list = calculate_k_means_polygons(coords)
-
+    end = time.time()
+    print(f'time to cluster {end - start:.2f} secs')
     # print(polygons_list_1)
     # print(polygons_list)
 

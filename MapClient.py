@@ -24,8 +24,9 @@ CONTOUR = "contour"
 # VIZ_SCATTER = "viz_scatter"
 
 HEATMAP = "heatmap"
-REFRESH_RATE = 10000
-
+REFRESH_RATE = 100000
+SIZE_LAT = 150
+SIZE_LONG = 150
 
 class PrintLMCPObject(IDataReceived):
     def dataReceived(self, lmcpObject):
@@ -45,7 +46,7 @@ class SampleHazardDetector(IDataReceived):
                             help='Server address of the target to run the demo on.')
         FLAGS = parser.parse_args()
         self.viz = Visdom(port=FLAGS.port, server=FLAGS.server)
-        self.fake_point = False  # whether import the boundaries of the fire from the xml
+        self.fake_point = True  # whether import the boundaries of the fire from the xml
         self.last_refresh = 0
         self.new_points_detected = False
 
@@ -55,11 +56,12 @@ class SampleHazardDetector(IDataReceived):
         self.__uavsLoiter = {}
         self.__estimatedHazardZone = Polygon()
         self.filename = None
-        self.heatmap = np.zeros((100, 100))  # the places where the fire was detected
-        self.last_detected = np.zeros((100, 100))  # the time at which the fire was last detected (or not) in that cell
-        self.smooth = np.zeros((100, 100))
+        self.heatmap = np.zeros((SIZE_LAT, SIZE_LONG))  # the places where the fire was detected
+        self.last_detected = np.zeros((SIZE_LAT, SIZE_LONG))  # the time at which the fire was last detected (or not) in that cell
+        self.smooth = np.zeros((SIZE_LAT, SIZE_LONG))
         self.drones_status = {}
         self.current_time = 0
+        self.force_recompute_times = []
         self.communication_channel = protobuf.communication_client.CommunicationChannel()
         # self.belief_model = BeliefModel()
 
@@ -77,6 +79,7 @@ class SampleHazardDetector(IDataReceived):
         self.last_refresh = 0
         self.new_points_detected = False
         keep_in_zone = self.scenario.getElementsByTagName('KeepInZone')
+        ############### KEEP IN ZONE ############################
         if len(keep_in_zone) > 0:  # if there is a keep in zone then constraint to that
             self.latitude = float(keep_in_zone[0].getElementsByTagName('Latitude')[0].childNodes[0].nodeValue)
             self.longitude = float(keep_in_zone[0].getElementsByTagName('Longitude')[0].childNodes[0].nodeValue)
@@ -91,7 +94,14 @@ class SampleHazardDetector(IDataReceived):
             self.max_long = max(low_loc.get_Longitude(), high_loc.get_Longitude())
             self.min_lat = min(low_loc.get_Latitude(), high_loc.get_Latitude())
             self.min_long = min(low_loc.get_Longitude(), high_loc.get_Longitude())
+        ################# SCORING TIMES ######################
+        scoring_times=self.scenario.getElementsByTagName("Hack")
+        self.force_recompute_times=[]
+        for scoring_time in scoring_times:
+            time = float(scoring_time.attributes['Time'].value)
+            self.force_recompute_times.append(time)
 
+        ################FAKE POINTS
         if self.fake_point:
             self.fake_points()
         print('scenario loaded')
@@ -144,10 +154,11 @@ class SampleHazardDetector(IDataReceived):
                     self.viz.close(win="Trajectory")
                     self.scenario = None
                     self.filename = None  # scenario not ready
-                    self.heatmap = np.zeros((100, 100))
-                    self.last_detected = np.zeros((100, 100))  # the time at which the fire was last detected (or not) in that cell
-                    self.smooth = np.zeros((100, 100))
+                    self.heatmap = np.zeros((SIZE_LAT, SIZE_LONG))
+                    self.last_detected = np.zeros((SIZE_LAT, SIZE_LONG))  # the time at which the fire was last detected (or not) in that cell
+                    self.smooth = np.zeros((SIZE_LAT, SIZE_LONG))
                     self.drones_status = {}
+                    self.force_recompute_times = []
                     # self.belief_model = BeliefModel()
                     if len(session_status.get_Parameters()) > 0:
                         param: KeyValuePair
@@ -266,6 +277,9 @@ class SampleHazardDetector(IDataReceived):
 
     def compute_and_send_estimate_hazardZone(self, force=False):
         delta_time = self.current_time - self.last_refresh
+        if (len(self.force_recompute_times)>0 and self.current_time>self.force_recompute_times[0]*1000):
+            self.force_recompute_times.pop(0)#remove first time
+            force = True #force recomputing
         if (force or delta_time > REFRESH_RATE and self.new_points_detected):
             self.last_refresh = self.current_time
             self.new_points_detected = False
