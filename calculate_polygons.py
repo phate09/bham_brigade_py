@@ -112,7 +112,10 @@ def calculate_k_means_polygons(coords):
         except Exception as ex:
             print(ex)
             print(f"error with k={k},trying with k--")
+            
             k = k - 1
+            if k < 1:
+                return []
 
     # return polygon_list
 
