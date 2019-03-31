@@ -20,6 +20,7 @@ from afrl.cmasi.searchai.HazardZoneEstimateReport import HazardZoneEstimateRepor
 from amase.TCPClient import AmaseTCPClient
 from amase.TCPClient import IDataReceived
 import geopy
+import argparse
 
 CONTOUR = "contour"
 
@@ -29,8 +30,9 @@ SIZE_LAT = 120  # size of the heatmap
 SIZE_LONG = 120  # size of the heatmap
 DECAY_REFRESH = 10000  # how often to refresh visdom due to decay
 MIN_ELAPSED_TIME = 10000  # milliseconds before considering removing the same point if seen again but with no fire
-USE_DECAY = True  # decays the heatmap gradually
-FAKE_INITIAL_POINTS = True  # for debug purposes, fills the heatmap with the points from the scenario
+USE_DECAY = False  # decays the heatmap gradually
+DECAY_MINUTES = 15
+FAKE_INITIAL_POINTS = False  # for debug purposes, fills the heatmap with the points from the scenario
 
 
 class PrintLMCPObject(IDataReceived):
@@ -43,14 +45,14 @@ class SampleHazardDetector(IDataReceived):
     def __init__(self, tcpClient):
         DEFAULT_PORT = 8097
         DEFAULT_HOSTNAME = "http://localhost"
-        parser = argparse.ArgumentParser(description='Demo arguments')
-        parser.add_argument('-port', metavar='port', type=int, default=DEFAULT_PORT,
-                            help='port the visdom server is running on.')
-        parser.add_argument('-server', metavar='server', type=str,
-                            default=DEFAULT_HOSTNAME,
-                            help='Server address of the target to run the demo on.')
-        FLAGS = parser.parse_args()
-        self.viz = Visdom(port=FLAGS.port, server=FLAGS.server)
+        # parser = argparse.ArgumentParser(description='Demo arguments')
+        # parser.add_argument('-port', metavar='port', type=int, default=DEFAULT_PORT,
+        #                     help='port the visdom server is running on.')
+        # parser.add_argument('-server', metavar='server', type=str,
+        #                     default=DEFAULT_HOSTNAME,
+        #                     help='Server address of the target to run the demo on.')
+        # FLAGS = parser.parse_args()
+        self.viz = Visdom(port=DEFAULT_PORT, server=DEFAULT_HOSTNAME)
         self.last_refresh = 0
         self.new_points_detected = False
 
@@ -162,7 +164,7 @@ class SampleHazardDetector(IDataReceived):
 
     def decay_heatmap(self, delta_time):
 
-        temp_decay = 1 / (15 * 60 * 1000) #decays to 0 in 15 minutes
+        temp_decay = 1 / (DECAY_MINUTES * 60 * 1000)  # decays to 0 in 15 minutes
         self.heatmap = self.heatmap - (temp_decay * delta_time)
         self.heatmap = np.clip(self.heatmap, 0.0, None)  # clip the value to positive values
         if (self.current_time - self.last_decay_refresh) > DECAY_REFRESH:
@@ -197,7 +199,7 @@ class SampleHazardDetector(IDataReceived):
         coords = []
         for row in range(self.heatmap.shape[0]):
             for col in range(self.heatmap.shape[1]):
-                if self.heatmap[row][col] > 0.95:  # This could be a 1 check but we are pre-empting expanding this for decay.
+                if self.heatmap[row][col] > 0.01:  # used for decay, only cells with more than a small probability are allowed
                     coords.append((row, col))
 
         return coords
@@ -334,6 +336,14 @@ class SampleHazardDetector(IDataReceived):
 #################
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Keep track of a map of fires in an area')
+    parser.add_argument('--fake', help='fakes the initial detection points. For debug purposes', action='store_true')
+    parser.add_argument('--decay', help='applies a decay to the heatmap so that old fires gradually get forgotten', action='store_true')
+    parser.add_argument('--decay_rate', type=float,default=15, help='minutes needed to erase a fire')
+    args = parser.parse_args()
+    USE_DECAY = args.decay
+    FAKE_INITIAL_POINTS = args.fake
+    DECAY_MINUTES = args.decay_rate
     myHost = 'localhost'
     myPort = 5555
     amaseClient = AmaseTCPClient(myHost, myPort)
