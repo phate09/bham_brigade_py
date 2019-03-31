@@ -45,13 +45,6 @@ class SampleHazardDetector(IDataReceived):
     def __init__(self, tcpClient):
         DEFAULT_PORT = 8097
         DEFAULT_HOSTNAME = "http://localhost"
-        # parser = argparse.ArgumentParser(description='Demo arguments')
-        # parser.add_argument('-port', metavar='port', type=int, default=DEFAULT_PORT,
-        #                     help='port the visdom server is running on.')
-        # parser.add_argument('-server', metavar='server', type=str,
-        #                     default=DEFAULT_HOSTNAME,
-        #                     help='Server address of the target to run the demo on.')
-        # FLAGS = parser.parse_args()
         self.viz = Visdom(port=DEFAULT_PORT, server=DEFAULT_HOSTNAME)
         self.last_refresh = 0
         self.new_points_detected = False
@@ -88,6 +81,8 @@ class SampleHazardDetector(IDataReceived):
                 self.compute_and_send_estimate_hazardZone()
                 if USE_DECAY:
                     self.decay_heatmap(delta_time)
+            elif self.filename is None:  # only move on when the scenario is ready
+                return
             if isinstance(lmcpObject, AirVehicleState):
                 print(f'time: {self.current_time} - vehicle update'.ljust(100), end='\r', flush=True)
                 vehicleState: AirVehicleState = lmcpObject
@@ -109,7 +104,6 @@ class SampleHazardDetector(IDataReceived):
                         if delta_time > MIN_ELAPSED_TIME:
                             self.heatmap[lat][long] = 0.0
                             self.last_detected[lat][long] = self.current_time  # the last registered time
-                            self.apply_smoothing()
                             self.new_points_detected = True
                             new_point = True
 
@@ -132,7 +126,6 @@ class SampleHazardDetector(IDataReceived):
                     if self.heatmap[lat][long] != 1.0:
                         self.heatmap[lat][long] = 1.0
                         self.last_detected[lat][long] = self.current_time  # the last registered time
-                        self.apply_smoothing()
                         self.new_points_detected = True
                         new_point = True
 
@@ -159,8 +152,9 @@ class SampleHazardDetector(IDataReceived):
         self.force_recompute_times = []
 
     def update_visdom(self):
-        self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot', xmin=0, xmax=1.0))
-        self.viz.contour(X=self.smooth, win=CONTOUR, opts=dict(title='Contour plot'))
+        self.apply_smoothing()
+        self.viz.heatmap(X=self.heatmap, win=HEATMAP, opts=dict(title='Heatmap plot', colormap='obspy_divergent', xmin=0, xmax=1.0))
+        self.viz.contour(X=self.smooth, win=CONTOUR, opts=dict(title='Contour plot', colormap='obspy_divergent', xmin=0, xmax=0.1))
 
     def decay_heatmap(self, delta_time):
 
@@ -284,7 +278,7 @@ class SampleHazardDetector(IDataReceived):
 
                 except Exception as ex:
                     print(ex)
-        self.apply_smoothing()
+
         self.update_visdom()
         self.compute_and_send_estimate_hazardZone(True)
 
@@ -339,7 +333,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Keep track of a map of fires in an area')
     parser.add_argument('--fake', help='fakes the initial detection points. For debug purposes', action='store_true')
     parser.add_argument('--decay', help='applies a decay to the heatmap so that old fires gradually get forgotten', action='store_true')
-    parser.add_argument('--decay_rate', type=float,default=15, help='minutes needed to erase a fire')
+    parser.add_argument('--decay_rate', type=float, default=15, help='minutes needed to erase a fire')
     args = parser.parse_args()
     USE_DECAY = args.decay
     FAKE_INITIAL_POINTS = args.fake
