@@ -1,4 +1,11 @@
-# Integration Instructions
+#Description
+This is a client for constructing and visualising the predicted areas with fire during the Fire-hack 2019 competition.
+
+The visualisation is managed by Visdom in the browser
+
+![Alt text](finalScreen.png)
+
+## Integration Instructions
 
 * Install Conda
 ## Running Things
